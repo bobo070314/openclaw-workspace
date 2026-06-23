@@ -166,6 +166,12 @@ releases/
 v1.1-self-evo-factory/states/
 v1.1-self-evo-factory/logs/
 
+# Content publish queue
+content/
+
+# Logs
+logs/
+
 # Reports
 SQL
 升级整治报告.md

@@ -574,6 +574,230 @@ def _apply_safe_patches(suggestion: dict, ts_now: str) -> bool:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# V5.2: Balance Monitor — prevent runaway overoptimization
+# ═══════════════════════════════════════════════════════════════════════
+
+SAFETY_CEILINGS = {
+    "deploy": 0.95,
+    "high_traffic": 0.70,
+    "config_change": 0.85,
+    "build_process": 0.80,
+    "disk_write": 0.90,
+    "memory_leak": 0.85,
+    "git_push": 0.90,
+    "cron_job": 0.60,
+}
+
+DAMPING_FACTOR = 0.85  # per-cycle entropy pull-back toward priors
+PRIORS = {
+    "deploy": 0.4,
+    "high_traffic": 0.3,
+    "config_change": 0.5,
+    "build_process": 0.4,
+    "disk_write": 0.6,
+    "memory_leak": 0.5,
+    "git_push": 0.5,
+    "cron_job": 0.2,
+}
+
+
+def balance_monitor(state):
+    """V5.2: Damping check — pull weights back toward Bayesian priors each cycle.
+
+    Prevents runaway overoptimization (e.g. deploy:1.0 biases against all other causes).
+    Applies exponential damping: w_new = w_old * DF + prior * (1-DF)
+    Enforces absolute safety ceilings.
+    """
+    w = state.setdefault("weights", {})
+    clamped = 0
+    damped = 0
+
+    for key, ceiling in SAFETY_CEILINGS.items():
+        cur = w.get(key, 0.5)
+        # Ceiling clamp
+        if cur > ceiling:
+            w[key] = ceiling
+            clamped += 1
+        # Damping toward prior
+        prior = PRIORS.get(key, 0.5)
+        w[key] = round(w[key] * DAMPING_FACTOR + prior * (1 - DAMPING_FACTOR), 3)
+        damped += 1
+
+    if clamped:
+        print(f"[EVO] Balance: {clamped} weights clamped at ceiling")
+    if damped:
+        print(f"[EVO] Balance: {damped} weights damped toward priors (DF={DAMPING_FACTOR})")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# V5.2: Autophagic Pruning — recycle or delete stale features
+# ═══════════════════════════════════════════════════════════════════════
+
+AUTOPHAGY_DIR = BASE / ".deploy" / "autophagy"
+SNAPSHOT_RETENTION = 3  # keep last N snapshots, recycle older
+ABANDONED_SKILL_DAYS = 30  # days without eval before flagging
+
+
+def autophagic_prune(state):
+    """V5.2: Autophagic Pruning — the system eats itself to stay lean.
+
+    Two-phase:
+    1. Snapshot compaction: keep last N evo_state snapshots, recycle disk.
+    2. Abandoned skill scan: detect skills without eval activity >30 days.
+
+    No files deleted by default — marked with .abandoned flag for manual review.
+    """
+    actions = []
+    AUTOPHAGY_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Phase 1: Snapshot rotation
+    snapshots = sorted(AUTOPHAGY_DIR.glob("evo_snapshot_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for stale in snapshots[SNAPSHOT_RETENTION:]:
+        stale.unlink(missing_ok=True)
+        actions.append(f"recycled:{stale.name}")
+
+    if snapshots:
+        print(
+            f"[EVO] Autophagy: kept {min(len(snapshots), SNAPSHOT_RETENTION)} snapshots, recycled {max(0, len(snapshots) - SNAPSHOT_RETENTION)}"
+        )
+
+    # Take current snapshot
+    snap_path = AUTOPHAGY_DIR / f"evo_snapshot_{datetime.now(TZ).strftime('%Y%m%d_%H%M%S')}.json"
+    snap_path.write_text(json.dumps(state, indent=2, default=str), encoding="utf-8")
+
+    # Phase 2: Abandoned feature scan
+    if EVAL_LOG.exists():
+        try:
+            recent_lines = EVAL_LOG.read_text(encoding="utf-8").strip().split("\n")[-100:]
+            tested_skills = set()
+            for line in recent_lines:
+                try:
+                    r = json.loads(line)
+                    tested_skills.add(r.get("skill"))
+                except json.JSONDecodeError:
+                    continue
+
+            # Check all runnable skills
+            for runpy in SKILLS.glob("*/run.py"):
+                skill_name = runpy.parent.name
+                if skill_name in tested_skills:
+                    continue
+                age = (datetime.now() - datetime.fromtimestamp(runpy.stat().st_mtime)).days
+                if age > ABANDONED_SKILL_DAYS:
+                    flag_path = runpy.parent / ".abandoned"
+                    if not flag_path.exists():
+                        flag_path.write_text(
+                            f"Autophagic flag: {datetime.now(TZ).isoformat()}\nLast eval: N/A\nSkill age: {age}d\n",
+                            encoding="utf-8",
+                        )
+                        actions.append(f"flagged:{skill_name}")
+        except Exception as e:
+            print(f"[EVO] Autophagy scan warning: {e}")
+
+    return actions
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# V5.2: Crisis Predictor — entropy-driven early warning
+# ═══════════════════════════════════════════════════════════════════════
+
+CRISIS_LOG = LOGS / "crisis_prediction.jsonl"
+CRISIS_THRESHOLD = 0.85  # entropy score above this = pre-crisis
+LOOKBACK_CYCLES = 10  # cycles to analyze for trends
+
+
+def crisis_predictor(state):
+    """V5.2: Crisis Predictor — entropy-driven early warning system.
+
+    Computes a composite entropy score from:
+    - Weight velocity (how fast weights are drifting from priors)
+    - Alert density (alerts per cycle in recent history)
+    - Cycle acceleration (interval between state changes decreasing?)
+
+    Returns a dict with score + recommendation. Score >CRISIS_THRESHOLD triggers
+    an "imminent crisis" alert pushed to message_bus.
+    """
+    result = {"score": 0.0, "components": {}, "recommendation": "normal"}
+
+    try:
+        w = state.get("weights", {})
+        # Component 1: Weight divergence from priors (0-1)
+        divergence = 0.0
+        n = 0
+        for k, prior in PRIORS.items():
+            cur = w.get(k, prior)
+            divergence += abs(cur - prior)
+            n += 1
+        weight_div = min(1.0, (divergence / max(n, 1)) * 2)
+
+        # Component 2: Trend (are weights accelerating?)
+        ds_history = state.get("deepseek_history", [])
+        trend_score = 0.0
+        if len(ds_history) >= 3:
+            intervals = []
+            for i in range(1, len(ds_history)):
+                try:
+                    t1 = datetime.fromisoformat(ds_history[i - 1]["ts"])
+                    t2 = datetime.fromisoformat(ds_history[i]["ts"])
+                    intervals.append(abs((t2 - t1).total_seconds()))
+                except (KeyError, ValueError):
+                    pass
+            if len(intervals) >= 2:
+                # Acceleration = intervals shrinking (faster mutations)
+                first_half = sum(intervals[: len(intervals) // 2]) / max(len(intervals) // 2, 1)
+                second_half = sum(intervals[len(intervals) // 2 :]) / max(len(intervals) - len(intervals) // 2, 1)
+                if first_half > 0 and second_half < first_half:
+                    # Shrinking intervals = higher acceleration
+                    trend_score = min(1.0, round(1 - (second_half / first_half), 3))
+
+        # Component 3: Alert density from eval logs
+        alert_score = 0.0
+        if EVAL_LOG.exists():
+            try:
+                recent = EVAL_LOG.read_text(encoding="utf-8").strip().split("\n")[-LOOKBACK_CYCLES:]
+                fail_count = sum(1 for line in recent if "fail" in line.lower() or "error" in line.lower())
+                alert_score = min(1.0, fail_count / max(len(recent), 1) * 3)
+            except Exception:
+                pass
+
+        # Composite (weighted)
+        composite = round(weight_div * 0.4 + trend_score * 0.35 + alert_score * 0.25, 3)
+        result["score"] = composite
+        result["components"] = {
+            "weight_divergence": round(weight_div, 3),
+            "trend_acceleration": round(trend_score, 3),
+            "alert_density": round(alert_score, 3),
+        }
+
+        if composite >= CRISIS_THRESHOLD:
+            result["recommendation"] = "LOCKDOWN: freeze weights, escalate to human"
+            # Push to message bus
+            try:
+                from core.message_bus import bus as message_bus
+
+                message_bus.emit("evo_crisis", "monitor", "crisis_alert", result)
+            except Exception:
+                pass
+        elif composite >= 0.65:
+            result["recommendation"] = "WATCH: slow evolution, increase damping"
+        else:
+            result["recommendation"] = "normal"
+
+        # Log
+        CRISIS_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(CRISIS_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": ts(), **result}, ensure_ascii=False) + "\n")
+
+        if composite >= 0.65:
+            print(f"[EVO] Crisis predictor: score={composite} -> {result['recommendation']}")
+
+    except Exception as e:
+        print(f"[EVO] Crisis predictor error: {e}")
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Main loop
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -590,6 +814,15 @@ def main():
         now = ts()
         print(f"\n[EVO] Cycle {state['cycle_count']} @ {now}")
 
+        # V5.2: Crisis predictor runs first — detect trouble BEFORE acting
+        crisis = crisis_predictor(state)
+        if crisis["recommendation"] == "LOCKDOWN: freeze weights, escalate to human":
+            print(f"[EVO] CRISIS LOCKDOWN: score={crisis['score']} — freezing weights, skipping evolution")
+            log_cycle(state, extra={"action": "crisis_lockdown", "crisis": crisis})
+            save_state(state)
+            time.sleep(60)
+            continue
+
         # V4.1: Self-DNA + V5.1: DeepSeek active evolution
         mutated = analyze_eval_logs(state)
         if mutated:
@@ -599,8 +832,16 @@ def main():
             if ds_suggestion:
                 apply_deepseek_suggestion(state, ds_suggestion)
 
+        # V5.2: Balance monitor — dampen weights AFTER evolution step
+        balance_monitor(state)
+
         # V4.5: Multi-Agent
         orchestrate_agents(state)
+
+        # V5.2: Autophagic pruning — compress snapshots + flag stale skills
+        prune_actions = autophagic_prune(state)
+        if prune_actions:
+            print(f"[EVO] Autophagy: {prune_actions}")
 
         # V5.0: Zero-Touch
         actions = auto_maintenance(state)

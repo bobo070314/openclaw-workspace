@@ -57,6 +57,8 @@
 - **winget 缓存锁在 D:\bobo\Temp**，文件被占用时安装失败，改用 Python 原生替代方案
 - **os.walk 遍历 D 盘 → 必 OOM**，2TB 文件系统不能用 walk，用已知路径列表
 - **Git push exit code 1 是 PowerShell 误判**，git 所有输出走 stderr，PowerShell 把非空 stderr 当错误
+- **修复方案：scripts/git_safe_push.py**，判断 fatal/error/Permission denied 等真失败才 non-zero
+- **Gateway 里需用 `python scripts/git_safe_push.py` 替代 `git push` 避免持久报错**
 - **process tool session 被 kill 后查不到 log**，直接 `process list` 看状态即可，别反复 poll
 
 ## 偏好

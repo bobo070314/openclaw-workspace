@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -58,9 +59,32 @@ def test_skill(skill_name: str, args: list[str], live: bool = False) -> dict:
     if not skill_path.exists():
         return {"skill": skill_name, "success": False, "error": f"Skill not found: {skill_path}", "mode": "dry-run"}
 
-    cmd = [sys.executable, str(skill_path)] + args
+    # In live mode, strip --dry-run from args and pass real params
+    actual_args = args
+    if live:
+        actual_args = [a for a in args if a != "--dry-run"]
+
+    # Load API tokens and inject into subprocess environment
+    env = os.environ.copy()
+    token_file = Path.home() / ".openclaw" / "api_tokens.json"
+    if token_file.exists():
+        try:
+            tokens = json.loads(token_file.read_text(encoding="utf-8"))
+            env["GITHUB_TOKEN"] = tokens.get("github_token", "")
+            env["NOTION_TOKEN"] = tokens.get("notion_token", "")
+            env["LINEAR_API_KEY"] = tokens.get("linear_token", "")
+            env["TENCENT_DOCS_API_KEY"] = tokens.get("tencent_docs_token", "")
+            env["WECOM_CORPID"] = tokens.get("wecom_corpid", "")
+            env["WECOM_CORPSECRET"] = tokens.get("wecom_corpsecret", "")
+            env["WECOM_AGENTID"] = tokens.get("wecom_agentid", "")
+        except Exception:
+            pass
+
+    cmd = [sys.executable, str(skill_path)] + actual_args
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace", env=env
+        )
         stdout = result.stdout[:500]
         stderr = result.stderr[:500]
         success = result.returncode == 0
@@ -88,7 +112,7 @@ def run_all(live: bool = False) -> dict:
         if not live:
             print(f"  {status} {skill} (dry-run)")
         else:
-            msg = r.get("stdout", r.get("error", "?"))[:80]
+            msg = (r.get("stdout") or r.get("error") or "?")[:80]
             print(f"  {status} {skill}: {msg}")
 
     passed = sum(1 for r in results if r["success"])

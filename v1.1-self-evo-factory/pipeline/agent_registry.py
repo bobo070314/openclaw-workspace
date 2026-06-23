@@ -100,7 +100,8 @@ def get_skills_for_agent(agent_name: str) -> list[str]:
 # CLI
 # ----------------------------------------------------------------
 def main():
-    import argparse, json
+    import argparse
+    import json
 
     parser = argparse.ArgumentParser(description="V3.0 Agent Registry")
     parser.add_argument("--list", action="store_true", help="List all agents")

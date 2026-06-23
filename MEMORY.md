@@ -39,7 +39,16 @@
 - wecomcli-msg/contact/doc/meeting/schedule/todo v0.2.0 ✅ 6个技能argparse + --dry-run
 - 全量审计: extraDirs 148 live, 0 stub, 1 bare (qclaw-shared)
 - ✅ V2.13 终态: 148/148 --version --json --dry-run 全部通过
-- ✅ 项目仓库: 23 commits, v2.13 tag 已推送 GitHub
+- ✅ 项目仓库: 25 commits, v2.13 tag 已推送 GitHub
+
+### V2.14 增补 (2026-06-23 21:21-21:30) — A+B+C+D 全套
+- ✅ pipeline/planner.py — V3.0 Planner 骨架 (关键词→DAG拆解)
+- ✅ pipeline/coordinator.py — V3.0 Coordinator (拓扑排序+技能调度)
+- ✅ pipeline/validate_apis.py — A方向: 17个API技能dry-run验证 (17/17 ✅)
+- ✅ eval-suite/test_deep_skills.py — D方向: 14个老技能业务场景测试 (14/14 ✅)
+- ✅ docs/V3_ROADMAP.md — 多Agent架构设计文档
+- ✅ deploy.bat — 一键部署+验证脚本
+- ✅ scripts/setup_new_env.py — 增强到8步全验证
 
 ### 基础设施
 - ruff 0.15.18: pre-commit hook 已部署 (Python版)

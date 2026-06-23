@@ -1,23 +1,15 @@
-# Node.js
 node_modules/
-.npm/
-*.log
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
 .venv/
-venv/
-*.egg-info/
 
-# Third-party clones (gh-enterprise-baseline)
+# Cloned repos
 gh-enterprise-baseline/
 Chart.js/
 FFmpeg/
 ImageMagick/
 Pillow/
-SQL/
+SQL
 aws-sdk-js/
 azure-sdk-for-js/
 black/
@@ -58,7 +50,7 @@ swagger-ui/
 trello/
 zaproxy/
 
-# Third-party skills (mirrors of above)
+# External skill mirrors
 skills/Chart.js/
 skills/FFmpeg/
 skills/black/
@@ -86,8 +78,6 @@ skills/spaCy/
 skills/svelte/
 skills/transformers/
 skills/trello/
-
-# External skill mirrors (QClaw / external)
 skills/agent-browser/
 skills/aippt/
 skills/another_them/
@@ -116,56 +106,28 @@ skills/skill-vetter/
 skills/summarize/
 skills/tavily-search/
 skills/tencent-docs/
-skills/unplugin/
 skills/vscode-node/
 skills/weather/
 skills/web-scraper/
 skills/xbrowser/
 skills/xlsx/
 skills/youdaonote/
+skills/github-actions-generator/
+skills/notion/
+skills/self-improving-agent/
+skills/site-doctor/
+skills/web-deploy-github/
 skills/clone-all.ps1
 skills/clone-new-skills.ps1
 skills/clone-skills-en.ps1
 
-# OpenClaw internal
+# OpenClaw
 .openclaw/
 .clawhub/
+.ruff_cache/
 .vscode/
 
-# Workspace config (tracked by chosen files, not directory)
-# specific files from root will be tracked individually
-
-# Temp / data / logs
-data/
-drafts/
-memory/
-templates/
-tests/
-tools/
-releases/
-temp/
-*.tmp
-
-# Misc scripts
-clone-skills.bat
-gbrain-launcher.bat
-
-# Reports from earlier audits
-V2.0_FINAL_AUDIT.md
-openclaw-workspace-state.json
-github-top60-weekly-growth.md
-gbrain-phase2-report.md
-gbrain-quickstart.md
-RELEASE_NOTES_v0.2.0.md
-SOUL.md.patch
-
-# Log files
-*.jsonl
-
-# PM2
-.pm2/
-
-# Workspace root files to NOT track (OpenClaw managed)
+# Workspace
 AGENTS.md
 HEARTBEAT.md
 IDENTITY.md
@@ -174,6 +136,42 @@ SOUL.md
 TOOLS.md
 USER.md
 gbrain.html
-SQL/
-scripts/update-github-rank.py
+gbrain-launcher.bat
+clone-skills.bat
+V2.0_FINAL_AUDIT.md
+openclaw-workspace-state.json
+github-top60-weekly-growth.md
+gbrain-phase2-report.md
+gbrain-quickstart.md
+RELEASE_NOTES_v0.2.0.md
+SOUL.md.patch
 q.test/
+scripts/update-github-rank.py
+
+# Data
+data/
+drafts/
+memory/
+templates/
+tests/
+tools/
+temp/
+releases/
+
+# Logs
+*.tmp
+*.jsonl
+.pm2/
+
+# Runtime
+v1.1-self-evo-factory/states/
+v1.1-self-evo-factory/logs/
+v1.1-self-evo-factory/eval-suite/
+
+# Reports
+SQL
+升级整治报告.md
+研究报告-新项目集成.md
+超级智能体路线图.md
+*\342\234\250*
+*✨*

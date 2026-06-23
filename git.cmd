@@ -9,9 +9,9 @@ if /i "%1"=="push" (
 if /i "%1"=="commit" goto safe
 if /i "%1"=="add" goto safe
 
-"%REAL_GIT%" %*
+"%REAL_GIT%" %* 2>&1
 exit /b %ERRORLEVEL%
 
 :safe
-"%REAL_GIT%" %*
+"%REAL_GIT%" %* 2>&1
 exit /b 0

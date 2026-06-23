@@ -9,6 +9,7 @@
 """
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -74,13 +75,15 @@ def save_state(state):
 
 
 def analyze_eval_logs(state):
-    """Read eval results; if >3 consecutive misattributions, adjust weights."""
+    """Read eval results; delegate to DeepSeek for analysis. Only log suggestions, never auto-commit code."""
     if not EVAL_LOG.exists():
         return False
 
     lines = EVAL_LOG.read_text(encoding="utf-8").strip().split("\n")[-20:]
-    mis = state.setdefault("misattributions", {})
+    if not lines:
+        return False
 
+    mis = state.setdefault("misattributions", {})
     for line in lines:
         try:
             r = json.loads(line)
@@ -91,17 +94,95 @@ def analyze_eval_logs(state):
         except json.JSONDecodeError:
             continue
 
+    changed = False
     for key, timestamps in list(mis.items()):
-        # Keep only last 24h
         cutoff = (datetime.now(TZ) - timedelta(hours=24)).isoformat()
         mis[key] = [t for t in timestamps if t > cutoff]
         if len(mis[key]) >= 3:
+            # V5.0: Ask DeepSeek, don't auto-mutate
             wrong_cause, real_cause = key.split("->")
-            adjust_weight(state, wrong_cause, real_cause)
-            # Reset after adjustment
-            mis[key] = []
-            return True
-    return False
+            ds_suggestion = ask_deepseek_for_weight_adjustment(state, wrong_cause, real_cause)
+            if ds_suggestion:
+                apply_deepseek_suggestion(state, ds_suggestion)
+                mis[key] = []
+                changed = True
+    return changed
+
+
+def ask_deepseek_for_weight_adjustment(state, wrong_cause, real_cause):
+    """Ask DeepSeek to analyze misattribution pattern. Returns suggestion dict or None."""
+    try:
+        from openai import OpenAI
+
+        weights = state.get("weights", {})
+        prompt = (
+            f"You are an AI Ops Engineer. Analyze a causal misattribution:\n"
+            f"- Wrong cause: {wrong_cause} (current weight: {weights.get(wrong_cause, 0.5)})\n"
+            f"- Real cause: {real_cause} (current weight: {weights.get(real_cause, 0.5)})\n"
+            f"- All weights: {json.dumps(weights)}\n\n"
+            f"Return a JSON with suggested adjustments. Lower the wrong, raise the real.\n"
+            f'Format: {{"reason":"...", "adjustments":{{"{wrong_cause}":-0.1, "{real_cause}":+0.1}}}}'
+        )
+        client = OpenAI(
+            api_key=os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
+            base_url=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        )
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+        )
+        content = resp.choices[0].message.content
+        return json.loads(content)
+    except Exception as e:
+        print(f"[EVO] DeepSeek analysis failed: {e}")
+        # Fallback: simple mechanical adjustment
+        return {
+            "reason": f"Mechanical fallback: {wrong_cause}->{real_cause}",
+            "adjustments": {wrong_cause: -0.15, real_cause: +0.1},
+        }
+
+
+def apply_deepseek_suggestion(state, suggestion):
+    """Apply DeepSeek's weight suggestions. LOG ONLY, never commit to git."""
+    adjustments = suggestion.get("adjustments", {})
+    reason = suggestion.get("reason", "No reason provided")
+    w = state.setdefault("weights", {})
+
+    applied = {}
+    for key, delta in adjustments.items():
+        old = w.get(key, 0.5)
+        new = round(max(0.1, min(1.0, old + delta)), 2)
+        w[key] = new
+        applied[key] = {"old": old, "new": new}
+
+    now = ts()
+    state["last_adjustment"] = now
+    state.setdefault("deepseek_history", []).append(
+        {
+            "ts": now,
+            "reason": reason,
+            "applied": applied,
+        }
+    )
+
+    # Log to ds_suggestions.jsonl (never auto-commit)
+    LOGS.mkdir(parents=True, exist_ok=True)
+    with open(LOGS / "ds_suggestions.jsonl", "a", encoding="utf-8") as f:
+        f.write(
+            json.dumps(
+                {
+                    "ts": now,
+                    "reason": reason,
+                    "weights": w,
+                },
+                ensure_ascii=False,
+            )
+            + "\n"
+        )
+
+    print(f"[EVO] {now} DeepSeek suggestion applied: {reason} {applied}")
 
 
 def adjust_weight(state, weaken: str, strengthen: str):

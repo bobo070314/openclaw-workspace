@@ -37,16 +37,54 @@ def sanitize_plate(input_str: str) -> str:
 
 # ========= 业务逻辑 =========
 def estimate_car_value(plate_number: str):
-    mock_market_price = random.randint(50000, 150000)
+    """V5.0: DeepSeek-powered valuation. Falls back to random mock on error."""
     damage_detected = random.choice([True, False])
-    if damage_detected:
-        mock_market_price = int(mock_market_price * 0.85)
-    return {
-        "plate": plate_number,
-        "market_value": mock_market_price,
-        "damage_detected": damage_detected,
-        "confidence": 0.92,
-    }
+    market_price = random.randint(50000, 150000)
+
+    try:
+        import os
+
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
+            base_url=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        )
+        prompt = (
+            f"Act as a senior car appraiser.\n"
+            f"Plate: {plate_number}\n"
+            f"Market Avg: {market_price}\n"
+            f"Visual Damage Detected: {damage_detected}\n\n"
+            f"If damage is true, apply depreciation factor 0.70-0.90.\n"
+            f'Return JSON: {{"final_price": int, "confidence": float, "factors": ["string"]}}'
+        )
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+        ds_result = json.loads(resp.choices[0].message.content)
+        return {
+            "plate": plate_number,
+            "market_value": ds_result.get("final_price", market_price),
+            "damage_detected": damage_detected,
+            "confidence": ds_result.get("confidence", 0.8),
+            "factors": ds_result.get("factors", []),
+            "engine": "deepseek",
+        }
+    except Exception as e:
+        # Fallback: mechanical valuation
+        if damage_detected:
+            market_price = int(market_price * 0.85)
+        return {
+            "plate": plate_number,
+            "market_value": market_price,
+            "damage_detected": damage_detected,
+            "confidence": 0.7,
+            "engine": "fallback",
+            "error": str(e)[:120],
+        }
 
 
 def main():

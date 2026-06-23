@@ -260,12 +260,12 @@ def capture_and_analyze_screen():
 
         import io
 
-        import pyautogui
-        from PIL import Image
+        from PIL import Image, ImageGrab
 
-        screenshot = pyautogui.screenshot()
+        screenshot_path = LOG_DIR / "screen_latest.png"
+        screenshot = ImageGrab.grab()
         img_bytes = io.BytesIO()
-        screenshot.save(img_bytes, format="PNG")
+        screenshot.save(str(screenshot_path))
 
         owl_script = SKILLS_DIR / "owl-vision" / "run.py"
         if not owl_script.exists():
@@ -294,8 +294,8 @@ def capture_and_analyze_screen():
             "message": f"Vision anomaly: {output[:120]}" if anomaly_hit else "Vision: screen normal",
             "details": output[:500],
         }
-    except ImportError:
-        return {"type": "vision", "value": 0, "alert": False, "message": "Vision deps missing (pyautogui pillow)"}
+    except ImportError as e:
+        return {"type": "vision", "value": 0, "alert": False, "message": f"Vision deps missing: {e}"}
     except Exception as e:
         return {"type": "vision", "value": 0, "alert": False, "message": f"Vision error: {e}"}
 

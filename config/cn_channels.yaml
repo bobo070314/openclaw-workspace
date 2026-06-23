@@ -1,0 +1,38 @@
+# 国内版渠道配置 — OpenClaw-CN v5.1
+# 所有敏感信息通过环境变量或 api_tokens.json 注入，此文件仅保留开关和标识
+
+channels:
+  # ---- 企微自建应用（主通道）----
+  wecom:
+    enabled: true
+    corpid: ""            # 企业微信后台 → 我的企业 → 企业ID
+    corpsecret: ""         # 自建应用 → Secret（管理员扫码可见）
+    agentid: 1000002       # 自建应用 → AgentId
+    token: ""              # 回调校验用，无回调留空
+    encoding_aes_key: ""   # 回调校验用，无回调留空
+    notify_users: ["@all"] # 测试阶段 @all，生产改为具体 UserID
+
+  # ---- 微信公众号（服务号/订阅号）----
+  wechat_offiaccount:
+    enabled: false
+    appid: ""
+    appsecret: ""
+    token: ""
+    encoding_aes_key: ""
+
+  # ---- 抖音企业号（开放平台）----
+  douyin:
+    enabled: false
+    client_key: ""
+    client_secret: ""
+    open_id: ""           # 企业号授权后回填
+    video_dir: "content/out/douyin"
+
+  # ---- 小红书专业号 ----
+  xiaohongshu:
+    enabled: false
+    note_dir: "content/out/xhs"
+
+# 发布队列
+content:
+  publish_root: "content/publish_queue"

@@ -31,6 +31,8 @@
 - report_delivery.py ✅ WeCom/SMTP双通道
 - INSTALL.md + setup_new_env.py ✅ 一键部署验证通过
 - eval-suite/run_all.py ✅ 主测试入口
+- notion v0.2.0 ✅ argparse + --dry-run + Notion API (query/page/create/search)
+- linear v0.2.0 ✅ argparse + --dry-run + GraphQL API (issues/create/projects)
 - 全量审计: extraDirs 148 live, 0 stub, 1 bare (qclaw-shared)
 
 ### 基础设施

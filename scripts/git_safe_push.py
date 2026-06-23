@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-"""git_safe_push.py — Filter PowerShell stderr false positives from git push.
-
-PowerShell treats any non-empty stderr as error, but git writes ALL output
-to stderr. This wrapper only fails on actual errors (fatal, error, permission
-denied, connection refused, etc.).
+"""git_safe_push.py — Suppress all PowerShell NativeCommandError noise.
+All git output (stdout + stderr) goes to stdout. Always returns exit 0
+unless a true git error is detected (fatal/error/rejected/denied).
 """
 
 import subprocess
@@ -44,16 +42,16 @@ def main():
         errors="replace",
     )
 
+    # Merge all output to stdout - never write to stderr
     if result.stdout:
-        print(result.stdout.strip())
+        sys.stdout.write(result.stdout.strip() + "\n")
     if result.stderr:
-        print(result.stderr.strip(), file=sys.stderr)
+        sys.stdout.write(result.stderr.strip() + "\n")
 
-    if result.returncode != 0:
-        if is_true_error(result.stderr):
-            return result.returncode
-        # False positive from PowerShell: git stderr is normal
-        return 0
+    # Only fail on true errors
+    if result.returncode != 0 and is_true_error(result.stderr):
+        sys.stdout.write("git_safe_push: TRUE ERROR DETECTED\n")
+        return 1
     return 0
 
 

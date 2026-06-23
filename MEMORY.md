@@ -1,20 +1,21 @@
 # MEMORY.md
-## 2026-06-23 终态 — V2.10.2 全量快照
+## 2026-06-23 终态 — V2.10.2 全量快照 (Batch 1 audit 修正)
 
 ### Git 仓库
 - **GitHub**: `git@github.com:bobo070314/v1.1-self-evo-factory.git` (SSH)
-- **分支**: master, 7 commits
+- **分支**: master, 14 commits
 - **Working tree**: CLEAN ✅
-- **.gitignore**: 已部署，排除 node_modules/ + 30个裸源码目录 + 日志/状态文件
+- **.gitignore**: 已部署，排除 node_modules/ + 日志/状态文件
 
-### 技能全量分类（152个目录）
-- **Live skills (run.py)**: 27
-  - 12 核心: create-skill, agent-testing, db-migrations, add-setting-env, code-navigator, frontend-code-review, security-audit, drizzle, release-notes-generator, deployment-automation, create-pr, infra-diagram-as-code
-  - 2 基础设施: token-saver, sandbox-executor
-  - 12 高频桩: design-system, i18n, linear, react, typescript, zustand, wecomcli-contact/doc/meeting/msg/schedule/todo, notion
-  - 1 未分类 (notion 有 run.py 但需 API Key)
-- **Stub skills (SKILL.md only)**: 95
-- **Bare dirs (第三方源码)**: 30 — Chart.js, FFmpeg, black, cypress, docker, eslint, flutter, gitbook, graphql-js, inkscape, jenkins, jest, kubernetes, next.js, nltk, nuxt.js, openclaw-skills, opencv, playwright, postman, prettier, react-native, react-native-elements, scikit-learn, scipy, spaCy, svelte, transformers, trello
+### 技能全量分类 — EXTRA DIRS 版（D:\bobo\openclaw-foreign\skills, 147个目录）
+- **Live skills (run.py)**: 146 ✅ 全部有 run.py + SKILL.md + _meta.json
+- **Stub skills (SKILL.md only)**: 0
+- **Bare**: 1 (qclaw-shared — 共享库，非技能)
+
+### 项目仓库版 (v1.1-self-evo-factory/skills, 152个目录)
+- 之前说的 "30 bare" 是 v1.1-self-evo-factory/skills/ 里的第三方源码（Chart.js, docker, eslint等），不是 extraDirs 技能
+- 这些 30 bare 目录已被 .gitignore 排除
+- 真实的技能全在 extraDirs `D:\bobo\openclaw-foreign\skills` 下
 
 ### 自进化闭环
 - self_coder.py: 9规则, 0错误, 4假阳性警告

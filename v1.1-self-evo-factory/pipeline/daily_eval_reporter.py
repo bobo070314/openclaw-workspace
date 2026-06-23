@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 from datetime import datetime, timezone
+from pipeline.report_delivery import deliver_report
 
 PROJECT_ROOT = Path(r'D:\bobo\openclaw-foreign\workspace\v1.1-self-evo-factory')
 STATES_DIR = PROJECT_ROOT / 'states'
@@ -182,6 +183,13 @@ def main():
     report_path, log_path = save_report(report)
     print(f"Report saved: {report_path}")
     print(f"Log appended: {log_path}")
+
+    # Deliver to channels
+    print()
+    print("Delivery:")
+    delivery_results = deliver_report(report)
+    for channel, status in delivery_results.items():
+        print(f"  {channel}: {status}")
 
     return 0 if report['summary']['all_green'] else 1
 

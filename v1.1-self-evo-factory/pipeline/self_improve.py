@@ -125,6 +125,12 @@ def run_eval_suite() -> dict:
     }
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def snapshot_skill(skill_name: str, base_dir: Path) -> Path:
     """Create a backup snapshot of a skill directory."""
     skill_dir = PROJECT_ROOT.parent / 'skills' / skill_name
@@ -145,6 +151,12 @@ def snapshot_skill(skill_name: str, base_dir: Path) -> Path:
     return snap_dir
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def rollback_skill(skill_name: str, snapshot_dir: Path) -> bool:
     """Restore a skill from a snapshot."""
     skill_dir = PROJECT_ROOT.parent / 'skills' / skill_name
@@ -169,8 +181,14 @@ def rollback_skill(skill_name: str, snapshot_dir: Path) -> bool:
     return True
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def run_cycle(skill_name: str, dry_run=False) -> dict:
-    """Run one complete improve cycle for a skill."""
+    """Run one complete improve cycle for a skill. @repair covers snapshot/rollback failures."""
     log = {
         'skill': skill_name,
         'timestamp': now_iso(),

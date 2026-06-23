@@ -1,15 +1,17 @@
 # MEMORY.md
-## 2026-06-23 终态 — V2.10.2 全量快照 (Batch 1 audit 修正)
+## 2026-06-23 终态 — V2.13 全量快照 (148/148 标准化)
 
 ### Git 仓库
 - **GitHub**: `git@github.com:bobo070314/v1.1-self-evo-factory.git` (SSH)
-- **分支**: master, 14 commits
+- **分支**: master, 23 commits
+- **Tag**: v2.13 ✅ 已推送
 - **Working tree**: CLEAN ✅
-- **.gitignore**: 已部署，排除 node_modules/ + 日志/状态文件
+- **.gitignore**: 已修复（覆盖 skills/*/run.py + .deploy/）
 
-### 技能全量分类 — EXTRA DIRS 版（D:\bobo\openclaw-foreign\skills, 147个目录）
-- **Live skills (run.py)**: 146 ✅ 全部有 run.py + SKILL.md + _meta.json
-- **Stub skills (SKILL.md only)**: 0
+### 技能全量分类 — EXTRA DIRS 版（D:\bobo\openclaw-foreign\skills, 148个目录）
+- **Live skills (run.py)**: 148 ✅ 全部 v0.2.0 标准化
+- **v0.2.0 CLI 标准**: --version / --json / --dry-run 148/148 (100%)
+- **Stub skills**: 0
 - **Bare**: 1 (qclaw-shared — 共享库，非技能)
 
 ### 项目仓库版 (v1.1-self-evo-factory/skills, 152个目录)
@@ -36,6 +38,8 @@
 - tencent-docs v0.2.0 ✅ argparse + --dry-run + 腾讯文档API (create/list/get)
 - wecomcli-msg/contact/doc/meeting/schedule/todo v0.2.0 ✅ 6个技能argparse + --dry-run
 - 全量审计: extraDirs 148 live, 0 stub, 1 bare (qclaw-shared)
+- ✅ V2.13 终态: 148/148 --version --json --dry-run 全部通过
+- ✅ 项目仓库: 23 commits, v2.13 tag 已推送 GitHub
 
 ### 基础设施
 - ruff 0.15.18: pre-commit hook 已部署 (Python版)

@@ -109,6 +109,48 @@ def analyze_eval_logs(state):
     return changed
 
 
+def analyze_eval_logs_with_ds(state):
+    """V5.1: Send full eval context to DeepSeek for code-level suggestions.
+    Returns a suggestion dict with optional code_patches for whitelisted targets.
+    """
+    if not EVAL_LOG.exists():
+        return None
+
+    lines = EVAL_LOG.read_text(encoding="utf-8").strip().split("\n")[-30:]
+    if not lines:
+        return None
+
+    try:
+        from openai import OpenAI
+
+        weights = state.get("weights", {})
+        prompt = (
+            "You are an AI evolution engineer. Review recent eval logs and propose code improvements.\n"
+            f"Current weights: {json.dumps(weights)}\n"
+            f"Recent evals (last 30 lines): {lines[:10]}... (truncated)\n\n"
+            "Return a JSON object with:\n"
+            '  "reason": why the change is needed,\n'
+            '  "adjustments": weight deltas,\n'
+            '  "code_patches": [{"target":"auto_valuation","old_function":"<exact old>","new_function":"<new impl>"}]\n'
+            "IMPORTANT: only patch auto_valuation.estimate_car_value. Replace random.randint with deterministic hash-based logic. "
+            "Do NOT use import/subprocess/exec/eval. Keep it pure Python math."
+        )
+        client = OpenAI(
+            api_key=os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
+            base_url=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        )
+        resp = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            temperature=0.2,
+        )
+        return json.loads(resp.choices[0].message.content)
+    except Exception as e:
+        print(f"[EVO] analyze_eval_logs_with_ds failed: {e}")
+        return None
+
+
 def ask_deepseek_for_weight_adjustment(state, wrong_cause, real_cause):
     """Ask DeepSeek to analyze misattribution pattern. Returns suggestion dict or None."""
     try:
@@ -145,7 +187,11 @@ def ask_deepseek_for_weight_adjustment(state, wrong_cause, real_cause):
 
 
 def apply_deepseek_suggestion(state, suggestion):
-    """Apply DeepSeek's weight suggestions. LOG ONLY, never commit to git."""
+    """Apply DeepSeek's weight suggestions. LOG + PATCH (safe files only).
+
+    Safety gate: only patches auto_valuation/run.py and report templates.
+    Never touches causal-reasoner, daemon, evolution_engine, or auth.
+    """
     adjustments = suggestion.get("adjustments", {})
     reason = suggestion.get("reason", "No reason provided")
     w = state.setdefault("weights", {})
@@ -167,20 +213,19 @@ def apply_deepseek_suggestion(state, suggestion):
         }
     )
 
-    # Log to ds_suggestions.jsonl (never auto-commit)
+    # Log to ds_suggestions.jsonl
     LOGS.mkdir(parents=True, exist_ok=True)
     with open(LOGS / "ds_suggestions.jsonl", "a", encoding="utf-8") as f:
         f.write(
             json.dumps(
-                {
-                    "ts": now,
-                    "reason": reason,
-                    "weights": w,
-                },
+                {"ts": now, "reason": reason, "weights": w},
                 ensure_ascii=False,
             )
             + "\n"
         )
+
+    # V5.1 ACTIVE EVOLUTION: apply code patches to whitelisted files only
+    _apply_safe_patches(suggestion, now)
 
     print(f"[EVO] {now} DeepSeek suggestion applied: {reason} {applied}")
 
@@ -456,6 +501,79 @@ def log_cycle(state, extra=None):
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# V5.1: Safe Active Evolution Patcher
+# ═══════════════════════════════════════════════════════════════════════
+
+WHITELIST_PATCH_TARGETS = {
+    "auto_valuation": SKILLS / "auto-valuation" / "run.py",
+}
+_WORKSPACE = BASE / "workspace"
+_GIT = _WORKSPACE / "git.cmd"
+GIT_CMD = str(_GIT) if _GIT.exists() else None
+
+
+def _apply_safe_patches(suggestion: dict, ts_now: str) -> bool:
+    """Apply DeepSeek code patches to whitelisted files only.
+
+    Gate rules:
+    1. Only files in WHITELIST_PATCH_TARGETS may be touched
+    2. Patches must reference a known function name in the target
+    3. Rejects any patch containing 'import', 'exec', 'eval', '__'
+    4. Auto git commit on success
+    """
+    code_patches = suggestion.get("code_patches", [])
+    if not code_patches:
+        return False
+
+    dangerous = {"import ", "exec(", "eval(", "__", "subprocess", "os.system"}
+    patched_files = []
+
+    for patch in code_patches:
+        target_key = patch.get("target")
+        old_func = patch.get("old_function", "")
+        new_func = patch.get("new_function", "")
+
+        if target_key not in WHITELIST_PATCH_TARGETS:
+            print(f"[EVO-PATCH] REJECTED {target_key}: not in whitelist")
+            continue
+
+        target_path = WHITELIST_PATCH_TARGETS[target_key]
+        if not target_path.exists():
+            print(f"[EVO-PATCH] REJECTED {target_key}: file not found")
+            continue
+
+        if any(d in new_func for d in dangerous):
+            print(f"[EVO-PATCH] REJECTED {target_key}: dangerous pattern detected")
+            continue
+
+        content = target_path.read_text(encoding="utf-8")
+        if old_func not in content:
+            print(f"[EVO-PATCH] REJECTED {target_key}: old_function not found in target")
+            continue
+
+        # Apply patch
+        new_content = content.replace(old_func, new_func, 1)
+        target_path.write_text(new_content, encoding="utf-8")
+        print(f"[EVO-PATCH] APPLIED {target_key}: patched {target_path.name}")
+
+        # Log patch
+        patchlog = {"ts": ts_now, "target": target_key, "reason": suggestion.get("reason", "")}
+        with open(LOGS / "patches_applied.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(patchlog, ensure_ascii=False) + "\n")
+
+        patched_files.append(str(target_path))
+
+    if patched_files and GIT_CMD:
+        for fp in patched_files:
+            subprocess.run([GIT_CMD, "add", fp], check=False)
+        subprocess.run(
+            [GIT_CMD, "commit", "-m", f"Auto-evolve: {suggestion.get('reason', 'DS optimization')}"], check=False
+        )
+
+    return bool(patched_files)
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Main loop
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -472,10 +590,14 @@ def main():
         now = ts()
         print(f"\n[EVO] Cycle {state['cycle_count']} @ {now}")
 
-        # V4.1: Self-DNA
+        # V4.1: Self-DNA + V5.1: DeepSeek active evolution
         mutated = analyze_eval_logs(state)
         if mutated:
             inject_weights_into_reasoner(state)
+            # V5.1: also send to DS for code-level suggestions
+            ds_suggestion = analyze_eval_logs_with_ds(state)
+            if ds_suggestion:
+                apply_deepseek_suggestion(state, ds_suggestion)
 
         # V4.5: Multi-Agent
         orchestrate_agents(state)

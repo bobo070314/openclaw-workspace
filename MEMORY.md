@@ -182,3 +182,8 @@
 - ✅ 闭环: Daemon(监控) → Reasoner(推理) → Guard(防御) 三级联动
 - ✅ Skills仓库: commit 3caa5f3 (causal-reasoner + daemon upgrade)
 - ⏳ 缺口: owl-vision (视觉), Notion/Linear/WeCom API真实验证 (需用户提供Token)
+
+### V4.0 Cron 暴走修复 (2026-06-23 22:28)
+- ❌ 问题: subconscious-daemon cron job 每60s spawn AI agent → ~18K tokens/run, 18次=~800K tokens wasted
+- ✅ 修复: 删除 cron job, 改用 HEARTBEAT.md 复用主session心跳
+- ✅ 新增: HEARTBEAT.md + heartbeat-state.json 标准化检查清单

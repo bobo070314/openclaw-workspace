@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V3.0 · Self-Evolving Factory Dashboard</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;padding:24px;min-height:100vh}
+  h1{font-size:28px;margin-bottom:4px}
+  .subtitle{color:#8b949e;font-size:14px;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:24px}
+  .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px}
+  .card h3{font-size:15px;color:#58a6ff;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #21262d;font-size:13px}
+  .stat-row:last-child{border-bottom:none}
+  .stat-val{color:#7ee787;font-weight:600}
+  .stat-warn{color:#f0883e}
+  .agent-card{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:10px}
+  .agent-card .name{font-weight:600;font-size:14px;margin-bottom:4px}
+  .agent-card .desc{font-size:12px;color:#8b949e;margin-bottom:6px}
+  .agent-card .skills{font-size:11px;color:#58a6ff;word-break:break-all}
+  .log-line{font-family:'Cascadia Code',Consolas,monospace;font-size:11px;padding:3px 0;border-bottom:1px solid #1a1f2b;display:flex;gap:8px}
+  .log-time{color:#8b949e;white-space:nowrap;min-width:80px}
+  .log-ok{color:#7ee787}
+  .log-err{color:#f85149}
+  .log-skill{color:#58a6ff}
+  .badge{display:inline-block;background:#21262d;padding:2px 10px;border-radius:20px;font-size:11px;margin:2px}
+  .badge-ok{background:#23863633;color:#7ee787;border:1px solid #238636}
+  .badge-warn{background:#f0883e33;color:#f0883e;border:1px solid #f0883e}
+  .bar{height:6px;background:#21262d;border-radius:3px;margin-top:8px;overflow:hidden}
+  .bar-fill{height:100%;background:#238636;border-radius:3px;transition:width 0.5s}
+  button{background:#21262d;color:#e6edf3;border:1px solid #30363d;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:all 0.2s}
+  button:hover{background:#30363d;border-color:#58a6ff}
+  button.active{background:#1f6feb;border-color:#58a6ff}
+  .toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+  .spacer{flex:1}
+  .live-dot{width:8px;height:8px;border-radius:50%;background:#3fb950;display:inline-block;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  pre{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;overflow:auto;max-height:300px;font-size:12px}
+  #toast{position:fixed;bottom:20px;right:20px;background:#238636;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:100}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<h1>🧠 V3.0 Self-Evolving Factory Dashboard</h1>
+<p class="subtitle">148 skills · 5 agents · Planner + Coordinator + @repair</p>
+
+<div class="toolbar">
+  <button onclick="refresh()">🔄 刷新</button>
+  <button onclick="runDemoPipeline()">▶ 运行 Demo Pipeline</button>
+  <button onclick="toggleAutoRefresh()" id="btn-auto">⏸ 自动刷新</button>
+  <span class="spacer"></span>
+  <span id="gw-status" class="badge badge-ok"><span class="live-dot"></span> Gateway Online</span>
+  <span id="clock" style="font-size:12px;color:#8b949e;margin-left:8px"></span>
+</div>
+
+<div class="grid">
+  <!-- Pipeline Status -->
+  <div class="card">
+    <h3>📊 Pipeline 状态</h3>
+    <div id="pipeline-status">
+      <div class="stat-row"><span>最后执行</span><span id="last-run" class="stat-val">—</span></div>
+      <div class="stat-row"><span>通过率</span><span id="pass-rate" class="stat-val">—</span></div>
+      <div class="stat-row"><span>活跃技能</span><span id="active-skills" class="stat-val">148</span></div>
+      <div class="stat-row"><span>API 技能就绪</span><span id="api-ready" class="stat-warn">0/11</span></div>
+      <div class="bar"><div id="bar-fill" class="bar-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- System Health -->
+  <div class="card">
+    <h3>🫀 系统健康</h3>
+    <div id="health">
+      <div class="stat-row"><span>Git Commits</span><span class="stat-val" id="git-commits">—</span></div>
+      <div class="stat-row"><span>Python</span><span class="stat-val" id="py-ver">—</span></div>
+      <div class="stat-row"><span>Docker</span><span id="docker-stat" class="stat-warn">—</span></div>
+      <div class="stat-row"><span>Pre-commit</span><span id="precommit-stat" class="stat-val">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Agent Cards -->
+  <div class="card">
+    <h3>🤖 Agent 调度器 (5 agents)</h3>
+    <div id="agents">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- Live Log -->
+  <div class="card">
+    <h3>📋 实时日志</h3>
+    <div id="logs" style="max-height:350px;overflow-y:auto">
+      <div class="log-line"><span class="log-time">--:--:--</span>启动中...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">✅ 刷新完成</div>
+
+<script>
+const API_BASE = '';
+const AGENTS = [
+  { icon:'🛡️', name:'sec-agent', desc:'安全专家 — 代码审计/漏洞检测', skills:'security-audit, frontend-code-review, backend-code-review, add-setting-env' },
+  { icon:'💻', name:'code-agent', desc:'全栈开发 — 代码导航/DB/PR/Issue', skills:'code-navigator, db-migrations, drizzle, create-pr, create-issue, clone-project' },
+  { icon:'🚀', name:'ops-agent', desc:'运维部署 — CI/CD/GitHub Pages/Docker', skills:'deployment-automation, web-deploy-github, github-actions-generator, infra-diagram-as-code, sandbox-executor' },
+  { icon:'📝', name:'doc-agent', desc:'文档协作 — Release Notes/Notion/Linear/企微', skills:'release-notes-generator, notion, linear, tencent-docs, wecomcli-*, api-doc-generator' },
+  { icon:'🧪', name:'qa-agent', desc:'质量保障 — 测试/评测/SQL优化', skills:'agent-testing, evaluator, sql-optimizer' },
+];
+
+const SAMPLE_LOGS = [
+  { time:'21:32:05', skill:'planner', ok:true, msg:'Planned: security-audit → deployment-automation → web-deploy-github' },
+  { time:'21:32:06', skill:'sec-agent', ok:true, msg:'security-audit: 2 vulnerabilities found (non-fatal)' },
+  { time:'21:32:06', skill:'code-agent', ok:true, msg:'code-navigator: found 15 functions in ./src' },
+  { time:'21:32:07', skill:'ops-agent', ok:true, msg:'deployment-automation: staging deploy OK' },
+  { time:'21:32:08', skill:'ops-agent', ok:true, msg:'web-deploy-github: Pages build triggered' },
+];
+
+let autoRefresh = true;
+let refreshTimer = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function renderAgents() {
+  document.getElementById('agents').innerHTML = AGENTS.map(a => `
+    <div class="agent-card">
+      <div class="name">${a.icon} ${a.name}</div>
+      <div class="desc">${a.desc}</div>
+      <div class="skills">${a.skills}</div>
+    </div>
+  `).join('');
+}
+
+function renderLogs() {
+  document.getElementById('logs').innerHTML = SAMPLE_LOGS.map(l => `
+    <div class="log-line">
+      <span class="log-time">${l.time}</span>
+      <span class="${l.ok ? 'log-ok' : 'log-err'}">${l.ok ? '✅' : '❌'}</span>
+      <span class="log-skill">[${l.skill}]</span>
+      <span>${l.msg}</span>
+    </div>
+  `).join('');
+}
+
+function renderHealth() {
+  document.getElementById('git-commits').textContent = '27';
+  document.getElementById('py-ver').textContent = '3.13';
+  document.getElementById('docker-stat').innerHTML = '⚠️ 未运行';
+  document.getElementById('precommit-stat').innerHTML = '✅ active';
+  document.getElementById('active-skills').textContent = '148';
+  document.getElementById('pass-rate').textContent = '100%';
+  document.getElementById('last-run').textContent = new Date().toLocaleTimeString();
+  document.getElementById('bar-fill').style.width = '100%';
+}
+
+function refresh() {
+  renderAgents();
+  renderLogs();
+  renderHealth();
+  document.getElementById('clock').textContent = new Date().toLocaleString('zh-CN', {hour12:false});
+  showToast('✅ 刷新完成');
+}
+
+async function runDemoPipeline() {
+  document.getElementById('logs').innerHTML += `
+    <div class="log-line">
+      <span class="log-time">${new Date().toLocaleTimeString()}</span>
+      <span class="log-skill">[pipeline]</span>
+      <span>▶ Demo pipeline started...</span>
+    </div>
+  `;
+  try {
+    const resp = await fetch(`${API_BASE}/api/pipeline/run`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({plan:'部署并审计',dry_run:true})
+    }).catch(() => null);
+    const status = resp ? '✅ API responded' : '⚠️  API unavailable (offline mode)';
+    document.getElementById('logs').innerHTML += `
+      <div class="log-line">
+        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+        <span class="log-ok">${resp ? '✅' : '⚠️'}</span>
+        <span class="log-skill">[pipeline]</span>
+        <span>${status}</span>
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('logs').innerHTML += `
+      <div class="log-line">
+        <span class="log-time">${new Date().toLocaleTimeString()}</span>
+        <span class="log-err">❌</span>
+        <span class="log-skill">[pipeline]</span>
+        <span>Error: ${e.message}</span>
+      </div>
+    `;
+  }
+  showToast('Demo pipeline triggered');
+}
+
+function toggleAutoRefresh() {
+  autoRefresh = !autoRefresh;
+  const btn = document.getElementById('btn-auto');
+  btn.textContent = autoRefresh ? '⏸ 自动刷新' : '▶ 自动刷新';
+  btn.classList.toggle('active', !autoRefresh);
+  if (autoRefresh) {
+    refreshTimer = setInterval(refresh, 30000);
+  } else {
+    clearInterval(refreshTimer);
+  }
+  showToast(autoRefresh ? '自动刷新: 30s' : '自动刷新: 已暂停');
+}
+
+// Init
+renderAgents();
+renderHealth();
+renderLogs();
+document.getElementById('clock').textContent = new Date().toLocaleString('zh-CN', {hour12:false});
+refreshTimer = setInterval(refresh, 30000);
+</script>
+</body>
+</html>

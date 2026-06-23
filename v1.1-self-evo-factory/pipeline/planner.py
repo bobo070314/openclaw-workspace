@@ -24,8 +24,9 @@ class Step:
 class Planner:
     """任务拆解器 — 用户目标 → Step DAG"""
 
-    # V3.0-alpha: 关键词 → 技能映射表
+    # V3.0-alpha: 关键词 → 技能映射表（中英双语）
     KEYWORD_MAP: Dict[str, List[str]] = {
+        # English
         "security": ["security-audit"],
         "audit": ["security-audit"],
         "deploy": ["deployment-automation"],
@@ -40,6 +41,20 @@ class Planner:
         "test": ["agent-testing"],
         "clone": ["clone-project"],
         "env": ["add-setting-env"],
+        # 中文
+        "安全": ["security-audit"],
+        "审计": ["security-audit"],
+        "部署": ["deployment-automation"],
+        "审查": ["frontend-code-review", "backend-code-review"],
+        "代码": ["code-navigator"],
+        "拉取": ["create-pr"],
+        "问题": ["create-issue"],
+        "发布": ["release-notes-generator"],
+        "迁移": ["db-migrations"],
+        "图表": ["infra-diagram-as-code"],
+        "测试": ["agent-testing"],
+        "克隆": ["clone-project"],
+        "环境": ["add-setting-env"],
     }
 
     # 依赖关系（硬编码 → V3.0-beta 换 LLM）
@@ -60,8 +75,16 @@ class Planner:
                         matched_skills.append(sk)
 
         if not matched_skills:
-            # Fallback: 单步执行
-            return [Step(action="execute", params={"goal": goal}, description="Direct execution")]
+            # Fallback: 用最基本的可用技能
+            return [
+                Step(action="deployment-automation", params={"goal": goal}, description="Fallback: deploy"),
+                Step(
+                    action="security-audit",
+                    params={"target": "."},
+                    depends_on=["deployment-automation"],
+                    description="Fallback: audit",
+                ),
+            ]
 
         steps = []
         for skill in matched_skills:

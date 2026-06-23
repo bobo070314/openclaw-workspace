@@ -33,6 +33,8 @@
 - eval-suite/run_all.py ✅ 主测试入口
 - notion v0.2.0 ✅ argparse + --dry-run + Notion API (query/page/create/search)
 - linear v0.2.0 ✅ argparse + --dry-run + GraphQL API (issues/create/projects)
+- tencent-docs v0.2.0 ✅ argparse + --dry-run + 腾讯文档API (create/list/get)
+- wecomcli-msg/contact/doc/meeting/schedule/todo v0.2.0 ✅ 6个技能argparse + --dry-run
 - 全量审计: extraDirs 148 live, 0 stub, 1 bare (qclaw-shared)
 
 ### 基础设施

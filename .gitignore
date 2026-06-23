@@ -127,10 +127,7 @@ skills/clone-skills-en.ps1
 .ruff_cache/
 .vscode/
 
-# Workspace
-AGENTS.md
-HEARTBEAT.md
-IDENTITY.md
+# Workspace (track MEMORY.md, keep rest excluded)
 MEMORY.md
 SOUL.md
 TOOLS.md
@@ -163,10 +160,9 @@ releases/
 *.jsonl
 .pm2/
 
-# Runtime
+# Runtime (keep eval-suite test files tracked)
 v1.1-self-evo-factory/states/
 v1.1-self-evo-factory/logs/
-v1.1-self-evo-factory/eval-suite/
 
 # Reports
 SQL

@@ -1,0 +1,7 @@
+{
+  "name": "zustand",
+  "description": "Zustand state management patterns",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

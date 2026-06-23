@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-schedule",
+  "description": "WeCom calendar scheduling — events and reminders",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

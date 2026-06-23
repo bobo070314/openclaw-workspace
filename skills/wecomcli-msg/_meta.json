@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-msg",
+  "description": "WeCom message sending — text, markdown, media messages",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

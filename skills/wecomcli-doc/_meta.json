@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-doc",
+  "description": "WeCom document operations — create/edit wiki docs",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

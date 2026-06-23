@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-meeting",
+  "description": "WeCom meeting management — schedule and list meetings",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

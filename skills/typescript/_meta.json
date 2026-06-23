@@ -1,0 +1,7 @@
+{
+  "name": "typescript",
+  "description": "TypeScript coding standards and patterns",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

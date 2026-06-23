@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-todo",
+  "description": "WeCom todo management — tasks and checklists",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

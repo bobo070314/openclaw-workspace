@@ -1,0 +1,7 @@
+{
+  "name": "linear",
+  "description": "Linear project management — issues, cycles, projects",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

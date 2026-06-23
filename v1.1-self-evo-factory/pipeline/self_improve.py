@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-V1.2 Self-Improve — Closed-Loop Engine
-========================================
+V2.10 Self-Improve — Closed-Loop Engine + self-heal-llm @repair
+================================================================
 Optimize → Eval → Apply → Re-eval → Keep/Rollback
+
+NEW in V2.10:
+  - @repair decorator on run_self_coder() and run_eval_suite()
+  - Uses DeepSeek V4 (via OpenRouter) for auto-fix
+  - Cache enabled for faster re-runs
 
 Usage:
   python self_improve.py <skill_name>
-  python self_improve.py --all          # Improve all skills
+  python self_improve.py --all
   python self_improve.py --dry-run self_coder
 """
 
@@ -19,7 +24,22 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Resolve project root (3 levels up from pipeline/)
+# ── self-heal-llm ──────────────────────────────────────────
+from self_heal import repair
+from openai import OpenAI
+
+# OpenRouter client for DeepSeek V4
+OPENROUTER_KEY = os.environ.get("OPENAI_API_KEY", "")
+HEAL_CLIENT = None
+if OPENROUTER_KEY:
+    HEAL_CLIENT = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_KEY,
+    )
+
+HEAL_MODEL = os.environ.get("HEAL_MODEL", "deepseek/deepseek-v4-pro")
+
+# ── Project paths ──────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SELF_CODER = PROJECT_ROOT / 'pipeline' / 'self_coder.py'
 EVAL_SUITE = PROJECT_ROOT / 'eval-suite' / 'test_self_coder.py'
@@ -34,8 +54,16 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def safe_run(cmd: list, cwd=None, timeout=60):
-    """Run a command safely, return (rc, stdout, stderr)."""
+    """Run a command safely, return (rc, stdout, stderr).
+    @repair will retry with LLM fix if subprocess fails unexpectedly.
+    """
     result = subprocess.run(
         cmd,
         capture_output=True,
@@ -48,8 +76,16 @@ def safe_run(cmd: list, cwd=None, timeout=60):
     return result.returncode, result.stdout, result.stderr
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def run_self_coder(target: str) -> dict:
-    """Run self_coder against a target file/dir, return parsed result."""
+    """Run self_coder against a target file/dir, return parsed result.
+    @repair will auto-fix JSON parse failures via LLM.
+    """
     rc, stdout, stderr = safe_run([sys.executable, str(SELF_CODER), '--rules', '--json', target])
     try:
         data = json.loads(stdout) if rc in (0, 1) else None
@@ -57,7 +93,7 @@ def run_self_coder(target: str) -> dict:
         data = None
 
     return {
-        'success': rc in (0, 1),  # exit 1 means found issues, that's OK
+        'success': rc in (0, 1),
         'exit_code': rc,
         'data': data,
         'stdout': stdout,
@@ -65,11 +101,18 @@ def run_self_coder(target: str) -> dict:
     }
 
 
+@repair(
+    max_attempts=3,
+    model=HEAL_MODEL,
+    verbose=True,
+    on_failure='return_none',
+)
 def run_eval_suite() -> dict:
-    """Run eval suite, return pass/fail status."""
+    """Run eval suite, return pass/fail status.
+    @repair auto-fixes eval crashes (import errors, syntax regressions).
+    """
     rc, stdout, stderr = safe_run([sys.executable, str(EVAL_SUITE)])
     all_green = 'ALL GREEN' in stdout
-    # Parse pass/fail counts
     passed = stdout.count('PASS:')
     failed = stdout.count('FAIL:')
     return {
@@ -108,7 +151,6 @@ def rollback_skill(skill_name: str, snapshot_dir: Path) -> bool:
     if not snapshot_dir.exists():
         return False
 
-    # Clear existing (keep .clawhub if present)
     for f in skill_dir.iterdir():
         if f.name == '.clawhub':
             continue
@@ -117,7 +159,6 @@ def rollback_skill(skill_name: str, snapshot_dir: Path) -> bool:
         elif f.is_dir():
             shutil.rmtree(f)
 
-    # Restore from snapshot
     for f in snapshot_dir.rglob('*'):
         if f.is_file():
             rel = f.relative_to(snapshot_dir)
@@ -139,33 +180,33 @@ def run_cycle(skill_name: str, dry_run=False) -> dict:
     }
 
     print(f"\n{'='*60}")
-    print(f"V1.2 Cycle: {skill_name}")
+    print(f"V2.10 Cycle: {skill_name} (self-heal-llm + @repair)")
     print(f"{'='*60}")
 
-    # Step 1: Pre-eval
-    print("[1/5] Pre-eval...")
+    # Step 1: Pre-eval (with @repair)
+    print("[1/5] Pre-eval (auto-heal enabled)...")
     pre_eval = run_eval_suite()
     log['pre_eval'] = {
-        'all_green': pre_eval['all_green'],
-        'passed': pre_eval['passed'],
-        'failed': pre_eval['failed'],
+        'all_green': pre_eval['all_green'] if pre_eval else False,
+        'passed': pre_eval['passed'] if pre_eval else 0,
+        'failed': pre_eval['failed'] if pre_eval else -1,
     }
-    print(f"  Pre-eval: {pre_eval['passed']}P/{pre_eval['failed']}F {'GREEN' if pre_eval['all_green'] else 'RED'}")
+    if pre_eval:
+        print(f"  Pre-eval: {pre_eval['passed']}P/{pre_eval['failed']}F {'GREEN' if pre_eval['all_green'] else 'RED'}")
 
-    # Step 2: Self-coder analysis
-    print("[2/5] Self-coder analysis...")
+    # Step 2: Self-coder analysis (with @repair)
+    print("[2/5] Self-coder analysis (auto-heal enabled)...")
     target = str(PROJECT_ROOT.parent / 'skills' / skill_name / 'run.py')
     target_path = Path(target)
     if not target_path.exists():
-        # Try scanning the entire skill dir
         target = str(PROJECT_ROOT.parent / 'skills' / skill_name)
     analysis = run_self_coder(target)
     log['analysis'] = {
-        'exit_code': analysis['exit_code'],
-        'file_count': len(analysis['data']) if analysis['data'] else 0,
+        'exit_code': analysis['exit_code'] if analysis else -1,
+        'file_count': len(analysis['data']) if analysis and analysis['data'] else 0,
     }
     issue_count = 0
-    if analysis['data']:
+    if analysis and analysis['data']:
         for f in analysis['data']:
             issue_count += len(f.get('issues', []))
     print(f"  Found: {issue_count} issues in {log['analysis']['file_count']} file(s)")
@@ -180,30 +221,37 @@ def run_cycle(skill_name: str, dry_run=False) -> dict:
         log['snapshot'] = None
         print("  No snapshot (skill dir not found)")
 
-    # Step 4: Post-eval (after analysis, before apply)
+    # Step 4: Post-eval
     print("[4/5] Post-eval (no changes applied yet)...")
     post_eval = run_eval_suite()
     log['post_eval'] = {
-        'all_green': post_eval['all_green'],
-        'passed': post_eval['passed'],
-        'failed': post_eval['failed'],
+        'all_green': post_eval['all_green'] if post_eval else False,
+        'passed': post_eval['passed'] if post_eval else 0,
+        'failed': post_eval['failed'] if post_eval else -1,
     }
 
     # Step 5: Decision
     print("[5/5] Decision...")
-    improved = post_eval['passed'] >= pre_eval['passed'] and post_eval['failed'] <= pre_eval['failed']
-    if post_eval['all_green']:
+    improved = (
+        post_eval and pre_eval
+        and post_eval['passed'] >= pre_eval['passed']
+        and post_eval['failed'] <= pre_eval['failed']
+    )
+    if post_eval and post_eval['all_green']:
         decision = 'PASS'
         print("  KEEP — All tests green, no changes needed")
     elif improved:
         decision = 'IMPROVED'
         print(f"  KEEP — Improved: {pre_eval['failed']}F -> {post_eval['failed']}F")
-    else:
+    elif post_eval:
         decision = 'REGRESSION'
         print(f"  ROLLBACK — Regression: {pre_eval['failed']}F -> {post_eval['failed']}F")
         if snap and not dry_run:
             rollback_skill(skill_name, snap)
             print(f"  Rolled back to snapshot")
+    else:
+        decision = 'ERROR'
+        print("  ERROR — Eval suite failed to run")
 
     log['decision'] = decision
     return log
@@ -220,16 +268,22 @@ def save_report(log: dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='V1.2 Self-Improve Closed Loop')
+    parser = argparse.ArgumentParser(description='V2.10 Self-Improve + self-heal-llm Closed Loop')
     parser.add_argument('skill', nargs='?', help='Skill name to improve')
     parser.add_argument('--all', action='store_true', help='Improve all skills')
     parser.add_argument('--dry-run', action='store_true', help='No actual changes')
+    parser.add_argument('--model', default=HEAL_MODEL, help=f'LLM model for @repair (default: {HEAL_MODEL})')
     args = parser.parse_args()
+
+    # Update HEAL_MODEL from CLI if provided
+    if args.model != HEAL_MODEL:
+        import self_improve
+        os.environ['HEAL_MODEL'] = args.model
 
     if args.all:
         skills_dir = PROJECT_ROOT.parent / 'skills'
         skills = [d.name for d in skills_dir.iterdir() if d.is_dir() and (d / 'SKILL.md').exists()]
-        print(f"V1.2 --all mode: {len(skills)} skills found")
+        print(f"V2.10 --all mode: {len(skills)} skills found")
         for s in sorted(skills):
             try:
                 log = run_cycle(s, dry_run=args.dry_run)
@@ -240,7 +294,6 @@ def main():
         log = run_cycle(args.skill, dry_run=args.dry_run)
         save_report(log)
     else:
-        # Default: improve self_coder (meta: improve the improver)
         print("No skill specified, running self-improvement cycle on eval-suite...")
         log = run_cycle('self_coder', dry_run=args.dry_run)
         save_report(log)

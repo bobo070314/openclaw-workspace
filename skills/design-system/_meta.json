@@ -1,0 +1,7 @@
+{
+  "name": "design-system",
+  "description": "Design system tokens and component specs",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

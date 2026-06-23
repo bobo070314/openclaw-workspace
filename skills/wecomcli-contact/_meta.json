@@ -1,0 +1,7 @@
+{
+  "name": "wecomcli-contact",
+  "description": "WeCom contact queries — users, departments, tags",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

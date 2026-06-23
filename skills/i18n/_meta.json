@@ -1,0 +1,7 @@
+{
+  "name": "i18n",
+  "description": "Internationalization and localization guide",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "react",
+  "description": "React component patterns and best practices",
+  "version": "0.1.0",
+  "status": "ready",
+  "entry": "run.py"
+}

@@ -2,15 +2,16 @@
 """cn_channels/xiaohongshu_publisher.py - OpenClaw-CN v5.1
 Xiaohongshu (小红书) professional account grass-planting pipeline.
 Note creation, queue management, bio link management.
-Compliance: professional account only, no private account automation."""
+Compliance: professional account only, no private account automation.
+"""
 
 import json
-import os
 import logging
-from pathlib import Path
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+import os
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, List
 
 UTC = timezone.utc
 LOG_DIR = Path("logs")

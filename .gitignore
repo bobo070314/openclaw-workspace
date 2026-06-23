@@ -144,6 +144,9 @@ SOUL.md.patch
 q.test/
 scripts/update-github-rank.py
 
+# Compliance runtime artifacts
+core/compliance/
+
 # Data
 data/
 drafts/

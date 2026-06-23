@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-security-audit — Static code security auditor.
+"""security-audit — Static code security auditor.
 Checks for SQL injection, XSS, hardcoded secrets, command injection,
 path traversal, and other common security vulnerabilities.
 
@@ -17,7 +16,6 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 # ─── Vulnerability Patterns ────────────────────────────────────
 
@@ -42,7 +40,7 @@ SECURITY_PATTERNS = [
     # XSS
     {
         "id": "SEC-XSS-001",
-        "pattern": r'\.innerHTML\s*=\s*[^=]',
+        "pattern": r"\.innerHTML\s*=\s*[^=]",
         "severity": "error",
         "message": "Unsafe innerHTML assignment — potential XSS vulnerability",
         "fix": "Use textContent or sanitize with DOMPurify",
@@ -50,7 +48,7 @@ SECURITY_PATTERNS = [
     },
     {
         "id": "SEC-XSS-002",
-        "pattern": r'document\.write\s*\(',
+        "pattern": r"document\.write\s*\(",
         "severity": "error",
         "message": "document.write() — potential XSS and CSP bypass",
         "fix": "Use DOM manipulation methods instead",
@@ -76,7 +74,7 @@ SECURITY_PATTERNS = [
     # Command Injection
     {
         "id": "SEC-CMD-001",
-        "pattern": r'os\.system\s*\(',
+        "pattern": r"os\.system\s*\(",
         "severity": "error",
         "message": "os.system() can lead to command injection — use subprocess.run()",
         "fix": "Use subprocess.run(cmd, shell=False) with list arguments",
@@ -84,7 +82,7 @@ SECURITY_PATTERNS = [
     },
     {
         "id": "SEC-CMD-002",
-        "pattern": r'(?:exec|eval)\s*\(\s*[^)]*\+[^)]*\)',
+        "pattern": r"(?:exec|eval)\s*\(\s*[^)]*\+[^)]*\)",
         "severity": "error",
         "message": "Dynamic code execution with string concatenation — command injection risk",
         "fix": "Avoid exec/eval, or sanitize input strictly",
@@ -93,7 +91,7 @@ SECURITY_PATTERNS = [
     # Path Traversal
     {
         "id": "SEC-PATH-001",
-        "pattern": r'open\s*\(\s*[^)]*\.\.[^)]*\)',
+        "pattern": r"open\s*\(\s*[^)]*\.\.[^)]*\)",
         "severity": "error",
         "message": "File path with '..' — potential path traversal vulnerability",
         "fix": "Sanitize paths with os.path.realpath() and restrict to safe directories",
@@ -101,7 +99,7 @@ SECURITY_PATTERNS = [
     },
     {
         "id": "SEC-PATH-002",
-        "pattern": r'path\.join\s*\(\s*[^)]*request',
+        "pattern": r"path\.join\s*\(\s*[^)]*request",
         "severity": "warning",
         "message": "Path constructed from request data — potential path traversal",
         "fix": "Validate and sanitize user-supplied path components",
@@ -110,7 +108,7 @@ SECURITY_PATTERNS = [
     # Insecure Deserialization
     {
         "id": "SEC-DESER-001",
-        "pattern": r'pickle\.loads?\s*\(',
+        "pattern": r"pickle\.loads?\s*\(",
         "severity": "error",
         "message": "Unsafe pickle deserialization — remote code execution risk",
         "fix": "Use JSON or another safe serialization format",
@@ -119,7 +117,7 @@ SECURITY_PATTERNS = [
     # Weak Cryptography
     {
         "id": "SEC-CRYPTO-001",
-        "pattern": r'(?i)md5\s*\(',
+        "pattern": r"(?i)md5\s*\(",
         "severity": "warning",
         "message": "MD5 is cryptographically broken — use SHA-256 or better",
         "fix": "Use hashlib.sha256() instead",
@@ -127,7 +125,7 @@ SECURITY_PATTERNS = [
     },
     {
         "id": "SEC-CRYPTO-002",
-        "pattern": r'(?i)sha1\s*\(',
+        "pattern": r"(?i)sha1\s*\(",
         "severity": "warning",
         "message": "SHA-1 is cryptographically weak — use SHA-256 or better",
         "fix": "Use hashlib.sha256() instead",
@@ -168,18 +166,19 @@ def scan_file(filepath: str) -> dict:
                 continue
             if re.search(rule["pattern"], line):
                 # Avoid duplicate findings on same line
-                existing = [v for v in result["vulnerabilities"]
-                            if v["line"] == i and v["rule_id"] == rule["id"]]
+                existing = [v for v in result["vulnerabilities"] if v["line"] == i and v["rule_id"] == rule["id"]]
                 if existing:
                     continue
-                result["vulnerabilities"].append({
-                    "line": i,
-                    "rule_id": rule["id"],
-                    "severity": rule["severity"],
-                    "message": rule["message"],
-                    "fix": rule["fix"],
-                    "code": stripped[:120],
-                })
+                result["vulnerabilities"].append(
+                    {
+                        "line": i,
+                        "rule_id": rule["id"],
+                        "severity": rule["severity"],
+                        "message": rule["message"],
+                        "fix": rule["fix"],
+                        "code": stripped[:120],
+                    }
+                )
 
     return result
 
@@ -187,7 +186,6 @@ def scan_file(filepath: str) -> dict:
 def scan_directory(directory: str, min_severity: str = "warning") -> dict:
     """Scan all files in a directory for security vulnerabilities."""
     severity_order = {"info": 0, "warning": 1, "error": 2}
-    min_level = severity_order.get(min_severity, 0)
 
     all_file_results = []
     root = Path(directory)
@@ -232,12 +230,16 @@ def main():
     )
     parser.add_argument("--dir", default=os.getcwd(), help="Directory to scan (default: cwd)")
     parser.add_argument("--file", default=None, help="Scan a single file")
-    parser.add_argument("--severity", default="warning",
-                        choices=["info", "warning", "error"],
-                        help="Minimum severity to report (default: warning)")
+    parser.add_argument(
+        "--severity",
+        default="warning",
+        choices=["info", "warning", "error"],
+        help="Minimum severity to report (default: warning)",
+    )
     parser.add_argument("--dry-run", action="store_true", default=True, help="Scan only, no changes (default)")
-    parser.add_argument("--no-dry-run", action="store_false", dest="dry_run",
-                        help="Scan and report (same as --dry-run for this skill)")
+    parser.add_argument(
+        "--no-dry-run", action="store_false", dest="dry_run", help="Scan and report (same as --dry-run for this skill)"
+    )
     parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     args = parser.parse_args()
@@ -274,22 +276,26 @@ def main():
             print(f"  Files with issues: {output['files_scanned']}")
             print(f"  Total vulnerabilities: {output['total_vulnerabilities']}")
             print(f"  By severity: {output['by_severity']}")
-            print(f"  By rule:")
+            print("  By rule:")
             for rule_id, count in sorted(output["by_rule"].items()):
                 print(f"    {rule_id}: {count}")
 
             # Show top files
             if output["files"]:
                 top_files = sorted(output["files"], key=lambda x: len(x["vulnerabilities"]), reverse=True)[:10]
-                print(f"\n  Top files (first 10):")
+                print("\n  Top files (first 10):")
                 for fr in top_files:
                     err_count = sum(1 for v in fr["vulnerabilities"] if v["severity"] == "error")
                     warn_count = sum(1 for v in fr["vulnerabilities"] if v["severity"] == "warning")
-                    print(f"    {fr['file']}: {len(fr['vulnerabilities'])} issues "
-                          f"(errors={err_count}, warnings={warn_count})")
+                    print(
+                        f"    {fr['file']}: {len(fr['vulnerabilities'])} issues "
+                        f"(errors={err_count}, warnings={warn_count})"
+                    )
 
-    error_count = output.get("by_severity", {}).get("error", 0) if not args.file else sum(
-        1 for v in output.get("vulnerabilities", []) if v["severity"] == "error"
+    error_count = (
+        output.get("by_severity", {}).get("error", 0)
+        if not args.file
+        else sum(1 for v in output.get("vulnerabilities", []) if v["severity"] == "error")
     )
     sys.exit(1 if error_count > 0 else 0)
 

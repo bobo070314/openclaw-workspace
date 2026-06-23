@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-create-skill — Skill Factory
+"""create-skill — Skill Factory
 =============================
 Creates a new skill directory from a template, generating:
   - SKILL.md
@@ -15,9 +14,7 @@ Usage:
 
 import argparse
 import json
-import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 SKILLS_DIR = Path(__file__).resolve().parent.parent
@@ -233,11 +230,13 @@ def main():
         description="Skill factory — creates new skill directories from templates",
     )
     parser.add_argument(
-        "--name", required=True,
+        "--name",
+        required=True,
         help="Skill name (directory name, e.g. my-skill)",
     )
     parser.add_argument(
-        "--description", required=True,
+        "--description",
+        required=True,
         help="Skill description",
     )
     parser.add_argument(
@@ -253,12 +252,14 @@ def main():
     )
     parser.add_argument("--json", action="store_true", help="Output as JSON")
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         default=True,
         help="Preview only, no file creation (default)",
     )
     parser.add_argument(
-        "--no-dry-run", action="store_false",
+        "--no-dry-run",
+        action="store_false",
         dest="dry_run",
         help="Actually create files",
     )
@@ -302,7 +303,7 @@ def main():
         if result["success"]:
             print(f"SUCCESS: Skill '{name}' created at {result['skill_dir']}")
             print(f"  Template: {args.template}")
-            print(f"  Files:")
+            print("  Files:")
             for f in result["files_created"]:
                 print(f"    - {f}")
         else:

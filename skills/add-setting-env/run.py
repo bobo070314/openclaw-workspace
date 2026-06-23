@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-add-setting-env — Environment Variable Validator
+"""add-setting-env — Environment Variable Validator
 =================================================
 Compares .env.example with .env to find:
   - Missing variables (in .env.example but not in .env)
@@ -15,7 +14,6 @@ Usage:
 
 import argparse
 import json
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -24,7 +22,7 @@ from pathlib import Path
 
 def parse_env_file(filepath):
     """Parse a .env file, returning {KEY: value} dict.
-    
+
     Handles:
       - KEY=value
       - KEY="value"
@@ -57,7 +55,7 @@ def parse_env_file(filepath):
             stripped = stripped[7:].strip()
 
         # Parse KEY=VALUE
-        match = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$', stripped)
+        match = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$", stripped)
         if not match:
             continue  # Skip malformed lines
 
@@ -133,9 +131,7 @@ def auto_resolve_paths(env_arg, example_arg):
             if results["example"]:
                 break
         if not results["example"]:
-            results["errors"].append(
-                "No .env.example found. Specify with --example or create one."
-            )
+            results["errors"].append("No .env.example found. Specify with --example or create one.")
 
     # Resolve .env
     if env_arg:
@@ -151,9 +147,7 @@ def auto_resolve_paths(env_arg, example_arg):
                 results["env"] = str(candidate.resolve())
                 break
         if not results["env"]:
-            results["errors"].append(
-                "No .env found. Specify with --env or create one."
-            )
+            results["errors"].append("No .env found. Specify with --env or create one.")
 
     return results
 
@@ -171,15 +165,13 @@ def generate_suggestions(missing, extra, example_path):
             else:
                 lines.append(f"{key}=")
         suggestions.append(
-            f"Add {len(missing)} missing variable(s) to .env:\n" +
-            "\n".join(f"  {line}" for line in lines)
+            f"Add {len(missing)} missing variable(s) to .env:\n" + "\n".join(f"  {line}" for line in lines)
         )
 
     if extra:
         extra_keys = sorted(extra)
         suggestions.append(
-            f"Found {len(extra)} variable(s) in .env not in {Path(example_path).name}: "
-            f"{', '.join(extra_keys)}"
+            f"Found {len(extra)} variable(s) in .env not in {Path(example_path).name}: {', '.join(extra_keys)}"
         )
 
     if not suggestions:
@@ -240,7 +232,7 @@ def main():
         if args.json:
             print(json.dumps(result, indent=2, ensure_ascii=False))
         else:
-            print(f"[DRY-RUN] Would validate:")
+            print("[DRY-RUN] Would validate:")
             print(f"  .env:         {env_path}")
             print(f"  .env.example: {example_path}")
         return 0
@@ -280,7 +272,7 @@ def main():
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
-        print(f"ENV Validation Report")
+        print("ENV Validation Report")
         print(f"  .env:         {env_path}")
         print(f"  .env.example: {example_path}")
         print(f"  Expected: {validation['total_expected']} variables")

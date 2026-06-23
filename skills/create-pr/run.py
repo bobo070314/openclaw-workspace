@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-create-pr — Create GitHub pull requests with templates.
+"""create-pr — Create GitHub pull requests with templates.
 Gracefully degrades when no GitHub token is available.
 
 Usage:
@@ -17,8 +16,6 @@ import re
 import subprocess
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
-
 
 PR_TEMPLATES = {
     "default": """## Summary
@@ -117,7 +114,7 @@ def get_remote_info(repo_path: str) -> dict:
         # Parse owner/repo from URL
         # ssh: git@github.com:owner/repo.git
         # https: https://github.com/owner/repo.git
-        m = re.search(r'[:/]([^/]+)/([^/]+?)(?:\.git)?$', remote_url)
+        m = re.search(r"[:/]([^/]+)/([^/]+?)(?:\.git)?$", remote_url)
         if m:
             info["owner"] = m.group(1)
             info["name"] = m.group(2)
@@ -208,8 +205,7 @@ def build_pr_body(body: str, template: str, diff_info: dict) -> str:
     return pr_body
 
 
-def create_github_pr(title: str, body: str, base: str, head: str,
-                     repo_path: str, dry_run: bool = True) -> dict:
+def create_github_pr(title: str, body: str, base: str, head: str, repo_path: str, dry_run: bool = True) -> dict:
     """Create a GitHub PR via gh CLI or API."""
     cwd = repo_path or os.getcwd()
     result = {
@@ -240,13 +236,12 @@ def create_github_pr(title: str, body: str, base: str, head: str,
     if gh_available:
         result["method"] = "gh-cli"
         if dry_run:
-            result["pr_url"] = f"[DRY-RUN] Would create PR via gh CLI"
+            result["pr_url"] = "[DRY-RUN] Would create PR via gh CLI"
             return result
 
         try:
             proc = subprocess.run(
-                ["gh", "pr", "create", "--title", title, "--body", body,
-                 "--base", base, "--head", head],
+                ["gh", "pr", "create", "--title", title, "--body", body, "--base", base, "--head", head],
                 cwd=cwd,
                 capture_output=True,
                 text=True,
@@ -257,7 +252,7 @@ def create_github_pr(title: str, body: str, base: str, head: str,
             if proc.returncode == 0:
                 output = proc.stdout.strip()
                 result["pr_url"] = output
-                m = re.search(r'pull/(\d+)', output)
+                m = re.search(r"pull/(\d+)", output)
                 if m:
                     result["pr_number"] = int(m.group(1))
             else:
@@ -347,9 +342,9 @@ def main():
                 print(f"  ERROR: {pr_result['error']}")
 
         # Show PR body preview
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("PR Body Preview:")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(pr_body[:2000])
         if len(pr_body) > 2000:
             print("... (truncated)")

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-db-migrations — Prisma Migration Scripts
+"""db-migrations — Prisma Migration Scripts
 =========================================
 Runs Prisma migration commands (cross-platform Python wrapper).
 Supports: migrate dev, migrate status, migrate diff, db push.
@@ -14,12 +13,10 @@ Usage:
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 VALID_COMMANDS = {
     "dev": "prisma migrate dev",

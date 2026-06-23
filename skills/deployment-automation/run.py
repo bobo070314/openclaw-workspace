@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-deployment-automation — Deploy/rollback/health check automation.
+"""deployment-automation — Deploy/rollback/health check automation.
 Automates deployment workflows with health checks, rollback capability,
 and dry-run preview.
 
@@ -19,7 +18,6 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 DEFAULT_HEALTH_CHECK_URL = "http://localhost:3000/health"
 DEFAULT_HEALTH_TIMEOUT = 30
 DEFAULT_HEALTH_INTERVAL = 2
@@ -36,6 +34,7 @@ def load_config(config_path: str) -> dict:
     if path.suffix in (".yaml", ".yml"):
         try:
             import yaml
+
             return yaml.safe_load(content) or {}
         except ImportError:
             # Fallback: simple key=value parsing
@@ -92,8 +91,9 @@ def run_command(cmd: list, cwd: str = None, dry_run: bool = True) -> dict:
     return result
 
 
-def health_check(url: str, timeout: int = DEFAULT_HEALTH_TIMEOUT,
-                 interval: int = DEFAULT_HEALTH_INTERVAL, dry_run: bool = True) -> dict:
+def health_check(
+    url: str, timeout: int = DEFAULT_HEALTH_TIMEOUT, interval: int = DEFAULT_HEALTH_INTERVAL, dry_run: bool = True
+) -> dict:
     """Perform HTTP health check on a deployed service."""
     result = {
         "url": url,
@@ -131,7 +131,7 @@ def health_check(url: str, timeout: int = DEFAULT_HEALTH_TIMEOUT,
                 result["healthy"] = True
                 result["elapsed_seconds"] = round(time.time() - start, 2)
                 return result
-        except Exception as e:
+        except Exception:
             pass
 
         if attempt < max_attempts:
@@ -174,12 +174,14 @@ def deploy(config: dict, dry_run: bool = True) -> dict:
         }
         if cmd:
             cmd_res = run_command(cmd, dry_run=dry_run)
-            res.update({
-                "exit_code": cmd_res["exit_code"],
-                "stdout": cmd_res["stdout"][:2000],
-                "stderr": cmd_res["stderr"][:1000],
-                "error": cmd_res.get("error"),
-            })
+            res.update(
+                {
+                    "exit_code": cmd_res["exit_code"],
+                    "stdout": cmd_res["stdout"][:2000],
+                    "stderr": cmd_res["stderr"][:1000],
+                    "error": cmd_res.get("error"),
+                }
+            )
             if cmd_res.get("exit_code") and cmd_res["exit_code"] != 0 and not dry_run:
                 res["failed"] = True
                 results.append(res)
@@ -221,12 +223,14 @@ def rollback(config: dict, dry_run: bool = True) -> dict:
         }
         if cmd:
             cmd_res = run_command(cmd, dry_run=dry_run)
-            res.update({
-                "exit_code": cmd_res["exit_code"],
-                "stdout": cmd_res["stdout"][:2000],
-                "stderr": cmd_res["stderr"][:1000],
-                "error": cmd_res.get("error"),
-            })
+            res.update(
+                {
+                    "exit_code": cmd_res["exit_code"],
+                    "stdout": cmd_res["stdout"][:2000],
+                    "stderr": cmd_res["stderr"][:1000],
+                    "error": cmd_res.get("error"),
+                }
+            )
         results.append(res)
 
     return {
@@ -244,8 +248,15 @@ def main():
     parser.add_argument("--rollback", action="store_true", help="Run rollback")
     parser.add_argument("--health-check", action="store_true", help="Run health check")
     parser.add_argument("--health-url", default=None, help="Health check URL (overrides config)")
-    parser.add_argument("--timeout", type=int, default=DEFAULT_HEALTH_TIMEOUT, help=f"Health check timeout in seconds (default: {DEFAULT_HEALTH_TIMEOUT})")
-    parser.add_argument("--dry-run", action="store_true", default=True, help="Preview only, no actual commands (default)")
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=DEFAULT_HEALTH_TIMEOUT,
+        help=f"Health check timeout in seconds (default: {DEFAULT_HEALTH_TIMEOUT})",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", default=True, help="Preview only, no actual commands (default)"
+    )
     parser.add_argument("--no-dry-run", action="store_false", dest="dry_run", help="Actually execute commands")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
 
@@ -268,16 +279,12 @@ def main():
 
     if args.health_check:
         health_url = args.health_url or config.get("health_check", {}).get("url", DEFAULT_HEALTH_CHECK_URL)
-        output["results"]["health_check"] = health_check(
-            health_url, timeout=args.timeout, dry_run=args.dry_run
-        )
+        output["results"]["health_check"] = health_check(health_url, timeout=args.timeout, dry_run=args.dry_run)
 
     if not any([args.deploy, args.rollback, args.health_check]):
         # Default: health check only
         health_url = args.health_url or config.get("health_check", {}).get("url", DEFAULT_HEALTH_CHECK_URL)
-        output["results"]["health_check"] = health_check(
-            health_url, timeout=args.timeout, dry_run=args.dry_run
-        )
+        output["results"]["health_check"] = health_check(health_url, timeout=args.timeout, dry_run=args.dry_run)
 
     if args.json:
         print(json.dumps(output, indent=2, ensure_ascii=False))
@@ -288,26 +295,37 @@ def main():
 
         for action, res in output["results"].items():
             if action == "deploy":
-                print(f"\n  Deploy:")
+                print("\n  Deploy:")
                 for step in res.get("deploy_results", []):
-                    status = "SKIPPED" if step.get("dry_run") else (
-                        "FAILED" if step.get("failed") else "OK" if step.get("exit_code") == 0 else f"exit={step.get('exit_code')}")
+                    status = (
+                        "SKIPPED"
+                        if step.get("dry_run")
+                        else (
+                            "FAILED"
+                            if step.get("failed")
+                            else "OK"
+                            if step.get("exit_code") == 0
+                            else f"exit={step.get('exit_code')}"
+                        )
+                    )
                     print(f"    [{status}] {step['step']}: {step['command']}")
                     if step.get("error"):
                         print(f"      ERROR: {step['error']}")
 
             elif action == "rollback":
-                print(f"\n  Rollback:")
+                print("\n  Rollback:")
                 for step in res.get("rollback_results", []):
                     print(f"    [STEP] {step['step']}: {step['command']}")
 
             elif action == "health_check":
-                print(f"\n  Health Check:")
+                print("\n  Health Check:")
                 if res.get("dry_run"):
                     print(f"    {res.get('stdout', 'DRY-RUN')}")
                 else:
                     status = "HEALTHY" if res.get("healthy") else "UNHEALTHY"
-                    print(f"    {status} — {res['url']} (attempts={res['attempts']}, elapsed={res['elapsed_seconds']}s)")
+                    print(
+                        f"    {status} — {res['url']} (attempts={res['attempts']}, elapsed={res['elapsed_seconds']}s)"
+                    )
                     if res.get("error"):
                         print(f"    ERROR: {res['error']}")
 

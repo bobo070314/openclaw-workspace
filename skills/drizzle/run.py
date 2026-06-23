@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-drizzle — drizzle-kit wrapper with --dry-run and --json support.
+"""drizzle — drizzle-kit wrapper with --dry-run and --json support.
 Wraps `npx drizzle-kit` commands for cross-platform database schema management.
 
 Usage:
@@ -132,35 +131,23 @@ def main():
     config_dir = os.path.dirname(os.path.abspath(config_path))
 
     if args.status:
-        output["results"]["status"] = run_drizzle_command(
-            config_path, ["check"], dry_run=args.dry_run
-        )
+        output["results"]["status"] = run_drizzle_command(config_path, ["check"], dry_run=args.dry_run)
 
     if args.generate:
-        output["results"]["generate"] = run_drizzle_command(
-            config_path, ["generate"], dry_run=args.dry_run
-        )
+        output["results"]["generate"] = run_drizzle_command(config_path, ["generate"], dry_run=args.dry_run)
 
     if args.push:
-        output["results"]["push"] = run_drizzle_command(
-            config_path, ["push"], dry_run=args.dry_run
-        )
+        output["results"]["push"] = run_drizzle_command(config_path, ["push"], dry_run=args.dry_run)
 
     if args.drop:
-        output["results"]["drop"] = run_drizzle_command(
-            config_path, ["drop"], dry_run=args.dry_run
-        )
+        output["results"]["drop"] = run_drizzle_command(config_path, ["drop"], dry_run=args.dry_run)
 
     if args.check:
-        output["results"]["check"] = run_drizzle_command(
-            config_path, ["check"], dry_run=args.dry_run
-        )
+        output["results"]["check"] = run_drizzle_command(config_path, ["check"], dry_run=args.dry_run)
 
     if not any([args.status, args.generate, args.push, args.drop, args.check]):
         # Default: show status
-        output["results"]["status"] = run_drizzle_command(
-            config_path, ["check"], dry_run=args.dry_run
-        )
+        output["results"]["status"] = run_drizzle_command(config_path, ["check"], dry_run=args.dry_run)
 
     if args.json:
         print(json.dumps(output, indent=2, ensure_ascii=False))

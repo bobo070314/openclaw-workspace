@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-release-notes-generator — Generate release notes from git history.
+"""release-notes-generator — Generate release notes from git history.
 Parses git log between two revisions and generates organized release notes.
 
 Usage:
@@ -18,7 +17,6 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 COMMIT_PATTERNS = {
     "feat": {"label": "Features", "emoji": "✨"},
@@ -39,11 +37,11 @@ COMMIT_PATTERNS = {
 }
 
 CONVENTIONAL_COMMIT_RE = re.compile(
-    r'^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<message>.+)$',
+    r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<message>.+)$",
     re.IGNORECASE,
 )
 
-BREAKING_RE = re.compile(r'BREAKING CHANGE:', re.IGNORECASE)
+BREAKING_RE = re.compile(r"BREAKING CHANGE:", re.IGNORECASE)
 
 
 def get_git_log(from_ref: str, to_ref: str, repo_path: str = None) -> dict:
@@ -81,7 +79,9 @@ def get_git_log(from_ref: str, to_ref: str, repo_path: str = None) -> dict:
     try:
         proc = subprocess.run(
             [
-                "git", "log", range_spec,
+                "git",
+                "log",
+                range_spec,
                 "--pretty=format:%H|%an|%ae|%ai|%s",
                 "--no-merges",
             ],
@@ -102,14 +102,16 @@ def get_git_log(from_ref: str, to_ref: str, repo_path: str = None) -> dict:
             parts = line.split("|", 4)
             if len(parts) >= 5:
                 sha, author, email, date_str, subject = parts
-                result["commits"].append({
-                    "sha": sha[:8],
-                    "full_sha": sha,
-                    "author": author,
-                    "email": email,
-                    "date": date_str,
-                    "subject": subject,
-                })
+                result["commits"].append(
+                    {
+                        "sha": sha[:8],
+                        "full_sha": sha,
+                        "author": author,
+                        "email": email,
+                        "date": date_str,
+                        "subject": subject,
+                    }
+                )
 
         result["commit_count"] = len(result["commits"])
     except subprocess.TimeoutExpired:
@@ -154,12 +156,14 @@ def generate_notes(git_data: dict, format: str = "markdown", version: str = None
     categorized = defaultdict(list)
     for commit in commits:
         ctype, message, scope = classify_commit(commit["subject"])
-        categorized[ctype].append({
-            "sha": commit["sha"],
-            "subject": message,
-            "scope": scope,
-            "author": commit["author"],
-        })
+        categorized[ctype].append(
+            {
+                "sha": commit["sha"],
+                "subject": message,
+                "scope": scope,
+                "author": commit["author"],
+            }
+        )
 
     if format == "json":
         cat_data = {}
@@ -171,27 +175,47 @@ def generate_notes(git_data: dict, format: str = "markdown", version: str = None
                     "message": i["subject"],
                     "scope": i["scope"],
                     "author": i["author"],
-                } for i in items
+                }
+                for i in items
             ]
-        return json.dumps({
-            "version": version or git_data.get("from_ref", "Unnamed"),
-            "range": git_data["range"],
-            "commit_count": git_data["commit_count"],
-            "categories": cat_data,
-        }, indent=2, ensure_ascii=False)
+        return json.dumps(
+            {
+                "version": version or git_data.get("from_ref", "Unnamed"),
+                "range": git_data["range"],
+                "commit_count": git_data["commit_count"],
+                "categories": cat_data,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
 
     # Markdown format
     lines = []
     version_title = version or git_data.get("from_ref", "Release")
     lines.append(f"# {version_title}")
-    lines.append(f"")
+    lines.append("")
     lines.append(f"**Range:** `{git_data['range']}`  ")
     lines.append(f"**Commits:** {git_data['commit_count']}  ")
     lines.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}  ")
     lines.append("")
 
-    for cat_key in ["breaking", "feat", "fix", "perf", "refactor", "security",
-                    "deps", "docs", "test", "style", "ci", "build", "chore", "revert", "other"]:
+    for cat_key in [
+        "breaking",
+        "feat",
+        "fix",
+        "perf",
+        "refactor",
+        "security",
+        "deps",
+        "docs",
+        "test",
+        "style",
+        "ci",
+        "build",
+        "chore",
+        "revert",
+        "other",
+    ]:
         items = categorized.get(cat_key, [])
         if not items:
             continue
@@ -281,10 +305,10 @@ def main():
         if args.output:
             print(f"[DRY-RUN] Would write to: {args.output}")
             print("---")
-        print(notes)
-
-    if git_data.get("error"):
-        sys.exit(1)
+        try:
+            print(notes)
+        except UnicodeEncodeError:
+            print(notes.encode("ascii", errors="replace").decode("ascii"))
 
     sys.exit(0)
 

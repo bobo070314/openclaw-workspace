@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-agent-testing — Multi-Framework Test Runner
+"""agent-testing — Multi-Framework Test Runner
 ============================================
 Auto-detects the test framework and runs the appropriate test command.
 Supported frameworks: pytest, vitest, jest, cargo test, go test.
@@ -13,12 +12,10 @@ Usage:
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 FRAMEWORK_DETECTION = {
     "pytest": ["pytest.ini", "pyproject.toml", "setup.cfg", "conftest.py"],
@@ -66,9 +63,13 @@ def detect_framework(project_path):
         for test_dir in ["tests", "test", "__tests__", "spec"]:
             if (path / test_dir).is_dir():
                 # Check file extensions to guess
-                for ext, fw in [(".py", "pytest"), (".test.ts", "vitest"),
-                                (".spec.ts", "vitest"), (".test.js", "jest"),
-                                (".spec.js", "jest")]:
+                for ext, fw in [
+                    (".py", "pytest"),
+                    (".test.ts", "vitest"),
+                    (".spec.ts", "vitest"),
+                    (".test.js", "jest"),
+                    (".spec.js", "jest"),
+                ]:
                     test_path = path / test_dir
                     if list(test_path.glob(f"*{ext}")):
                         detected.append(fw)
@@ -145,16 +146,17 @@ def parse_test_output(framework, stdout, stderr, exit_code):
     if framework == "pytest":
         # Try parsing pytest summary line: "== X passed, Y failed in Zs =="
         import re
-        match = re.search(r'(\d+)\s+passed', stdout)
+
+        match = re.search(r"(\d+)\s+passed", stdout)
         if match:
             parsed["passed"] = int(match.group(1))
-        match = re.search(r'(\d+)\s+failed', stdout)
+        match = re.search(r"(\d+)\s+failed", stdout)
         if match:
             parsed["failed"] = int(match.group(1))
-        match = re.search(r'(\d+)\s+skipped', stdout)
+        match = re.search(r"(\d+)\s+skipped", stdout)
         if match:
             parsed["skipped"] = int(match.group(1))
-        match = re.search(r'in\s+([\d.]+)s', stdout)
+        match = re.search(r"in\s+([\d.]+)s", stdout)
         if match:
             parsed["duration_sec"] = float(match.group(1))
         if parsed["passed"] is not None and parsed["failed"] is not None:
@@ -164,7 +166,8 @@ def parse_test_output(framework, stdout, stderr, exit_code):
         # Try parsing JSON output
         try:
             import re
-            json_start = stdout.rfind('{')
+
+            json_start = stdout.rfind("{")
             if json_start >= 0:
                 data = json.loads(stdout[json_start:])
                 parsed["total"] = data.get("numTotalTestSuites") or data.get("numTotalTests")
@@ -176,7 +179,8 @@ def parse_test_output(framework, stdout, stderr, exit_code):
         if parsed["total"] is None:
             # Fallback to text summary
             import re
-            match = re.search(r'Tests:\s+(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+total', stdout, re.IGNORECASE)
+
+            match = re.search(r"Tests:\s+(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+total", stdout, re.IGNORECASE)
             if match:
                 parsed["passed"] = int(match.group(1))
                 parsed["failed"] = int(match.group(2))
@@ -185,6 +189,7 @@ def parse_test_output(framework, stdout, stderr, exit_code):
     elif framework == "go":
         # go test -json: count pass/fail events
         import re
+
         passed = 0
         failed = 0
         for line in stdout.splitlines():
@@ -204,7 +209,8 @@ def parse_test_output(framework, stdout, stderr, exit_code):
     elif framework == "cargo":
         # cargo test summary: "test result: ok. X passed; Y failed; Z ignored"
         import re
-        match = re.search(r'test result:.*?(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+ignored', stdout)
+
+        match = re.search(r"test result:.*?(\d+)\s+passed.*?(\d+)\s+failed.*?(\d+)\s+ignored", stdout)
         if match:
             parsed["passed"] = int(match.group(1))
             parsed["failed"] = int(match.group(2))
@@ -254,11 +260,12 @@ def main():
                 print(f"ERROR: {error}", file=sys.stderr)
             return 1
         if not detected:
-            result.update({
-                "success": False,
-                "error": "No supported test framework detected. "
-                         "Supported: pytest, vitest, jest, cargo, go",
-            })
+            result.update(
+                {
+                    "success": False,
+                    "error": "No supported test framework detected. Supported: pytest, vitest, jest, cargo, go",
+                }
+            )
             if args.json:
                 print(json.dumps(result, indent=2, ensure_ascii=False))
             else:
@@ -298,8 +305,10 @@ def main():
             parsed = result.get("parsed", {})
             print(f"SUCCESS: {framework} tests passed")
             if parsed.get("total") is not None:
-                print(f"  Total: {parsed['total']}, Passed: {parsed.get('passed', '?')}, "
-                      f"Failed: {parsed.get('failed', 0)}, Skipped: {parsed.get('skipped', 0)}")
+                print(
+                    f"  Total: {parsed['total']}, Passed: {parsed.get('passed', '?')}, "
+                    f"Failed: {parsed.get('failed', 0)}, Skipped: {parsed.get('skipped', 0)}"
+                )
                 if parsed.get("duration_sec"):
                     print(f"  Duration: {parsed['duration_sec']:.2f}s")
         else:

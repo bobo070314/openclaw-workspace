@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-code-navigator — Symbol-level code navigation.
+"""code-navigator — Symbol-level code navigation.
 Finds functions, classes, interfaces, exports, imports, and supports fuzzy search.
 
 Usage:
@@ -19,43 +18,42 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 # Regex patterns for non-Python files
 PATTERNS = {
     "function": {
-        ".ts": r'(?:export\s+)?(?:async\s+)?function\s+(\w+)',
-        ".tsx": r'(?:export\s+)?(?:async\s+)?function\s+(\w+)',
-        ".js": r'(?:export\s+)?(?:async\s+)?function\s+(\w+)',
-        ".jsx": r'(?:export\s+)?(?:async\s+)?function\s+(\w+)',
-        ".go": r'func\s+(\w+)',
-        ".rs": r'fn\s+(\w+)',
-        ".py": r'def\s+(\w+)',
+        ".ts": r"(?:export\s+)?(?:async\s+)?function\s+(\w+)",
+        ".tsx": r"(?:export\s+)?(?:async\s+)?function\s+(\w+)",
+        ".js": r"(?:export\s+)?(?:async\s+)?function\s+(\w+)",
+        ".jsx": r"(?:export\s+)?(?:async\s+)?function\s+(\w+)",
+        ".go": r"func\s+(\w+)",
+        ".rs": r"fn\s+(\w+)",
+        ".py": r"def\s+(\w+)",
     },
     "class": {
-        ".ts": r'(?:export\s+)?class\s+(\w+)',
-        ".tsx": r'(?:export\s+)?class\s+(\w+)',
-        ".js": r'(?:export\s+)?class\s+(\w+)',
-        ".jsx": r'(?:export\s+)?class\s+(\w+)',
-        ".py": r'class\s+(\w+)',
+        ".ts": r"(?:export\s+)?class\s+(\w+)",
+        ".tsx": r"(?:export\s+)?class\s+(\w+)",
+        ".js": r"(?:export\s+)?class\s+(\w+)",
+        ".jsx": r"(?:export\s+)?class\s+(\w+)",
+        ".py": r"class\s+(\w+)",
     },
     "interface": {
-        ".ts": r'(?:export\s+)?interface\s+(\w+)',
-        ".tsx": r'(?:export\s+)?interface\s+(\w+)',
-        ".go": r'type\s+(\w+)\s+interface',
+        ".ts": r"(?:export\s+)?interface\s+(\w+)",
+        ".tsx": r"(?:export\s+)?interface\s+(\w+)",
+        ".go": r"type\s+(\w+)\s+interface",
     },
     "export": {
-        ".ts": r'export\s+(?:const|let|var|function|class|interface|type|enum)\s+(\w+)',
-        ".tsx": r'export\s+(?:const|let|var|function|class|interface|type|enum)\s+(\w+)',
-        ".js": r'(?:export\s+(?:const|let|var|function|class)\s+(\w+)|module\.exports\s*=\s*(\w+))',
-        ".jsx": r'(?:export\s+(?:const|let|var|function|class)\s+(\w+)|module\.exports\s*=\s*(\w+))',
-        ".py": r'(?:^__all__\s*=\s*\[|^(\w+)\s*=.*#\s*export)',
+        ".ts": r"export\s+(?:const|let|var|function|class|interface|type|enum)\s+(\w+)",
+        ".tsx": r"export\s+(?:const|let|var|function|class|interface|type|enum)\s+(\w+)",
+        ".js": r"(?:export\s+(?:const|let|var|function|class)\s+(\w+)|module\.exports\s*=\s*(\w+))",
+        ".jsx": r"(?:export\s+(?:const|let|var|function|class)\s+(\w+)|module\.exports\s*=\s*(\w+))",
+        ".py": r"(?:^__all__\s*=\s*\[|^(\w+)\s*=.*#\s*export)",
     },
     "import": {
-        ".ts": r'import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from',
-        ".tsx": r'import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from',
-        ".js": r'(?:import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from|require\([^)]*\))',
-        ".jsx": r'(?:import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from|require\([^)]*\))',
-        ".py": r'(?:from\s+\S+\s+import\s+(\w+)|import\s+(\w+))',
+        ".ts": r"import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from",
+        ".tsx": r"import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from",
+        ".js": r"(?:import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from|require\([^)]*\))",
+        ".jsx": r"(?:import\s+\{[^}]*\b(\w+)\b[^}]*\}\s+from|require\([^)]*\))",
+        ".py": r"(?:from\s+\S+\s+import\s+(\w+)|import\s+(\w+))",
     },
 }
 
@@ -84,7 +82,7 @@ def find_symbols_in_file(filepath: str, symbol_type: str = None) -> list:
             if ext != path.suffix:
                 continue
             for match in re.finditer(pat, content, re.MULTILINE):
-                line_no = content[:match.start()].count('\n') + 1
+                line_no = content[: match.start()].count("\n") + 1
                 # Get all capture groups, take first non-None
                 name = None
                 for g in match.groups():
@@ -92,12 +90,14 @@ def find_symbols_in_file(filepath: str, symbol_type: str = None) -> list:
                         name = g
                         break
                 if name:
-                    results.append({
-                        "file": str(path),
-                        "line": line_no,
-                        "type": stype,
-                        "name": name,
-                    })
+                    results.append(
+                        {
+                            "file": str(path),
+                            "line": line_no,
+                            "type": stype,
+                            "name": name,
+                        }
+                    )
     return results
 
 
@@ -114,42 +114,52 @@ def _find_python_symbols(filepath: str, content: str, symbol_type: str = None) -
             continue
 
         if isinstance(node, ast.FunctionDef) and (not symbol_type or symbol_type in ("function", "all")):
-            results.append({
-                "file": filepath,
-                "line": node.lineno,
-                "type": "function",
-                "name": node.name,
-            })
+            results.append(
+                {
+                    "file": filepath,
+                    "line": node.lineno,
+                    "type": "function",
+                    "name": node.name,
+                }
+            )
         elif isinstance(node, ast.AsyncFunctionDef) and (not symbol_type or symbol_type in ("function", "all")):
-            results.append({
-                "file": filepath,
-                "line": node.lineno,
-                "type": "async_function",
-                "name": node.name,
-            })
+            results.append(
+                {
+                    "file": filepath,
+                    "line": node.lineno,
+                    "type": "async_function",
+                    "name": node.name,
+                }
+            )
         elif isinstance(node, ast.ClassDef) and (not symbol_type or symbol_type in ("class", "all")):
-            results.append({
-                "file": filepath,
-                "line": node.lineno,
-                "type": "class",
-                "name": node.name,
-            })
+            results.append(
+                {
+                    "file": filepath,
+                    "line": node.lineno,
+                    "type": "class",
+                    "name": node.name,
+                }
+            )
         elif isinstance(node, ast.Import) and (not symbol_type or symbol_type in ("import", "all")):
             for alias in node.names:
-                results.append({
-                    "file": filepath,
-                    "line": node.lineno,
-                    "type": "import",
-                    "name": alias.asname or alias.name,
-                })
+                results.append(
+                    {
+                        "file": filepath,
+                        "line": node.lineno,
+                        "type": "import",
+                        "name": alias.asname or alias.name,
+                    }
+                )
         elif isinstance(node, ast.ImportFrom) and (not symbol_type or symbol_type in ("import", "all")):
             for alias in node.names:
-                results.append({
-                    "file": filepath,
-                    "line": node.lineno,
-                    "type": "import",
-                    "name": alias.asname or alias.name,
-                })
+                results.append(
+                    {
+                        "file": filepath,
+                        "line": node.lineno,
+                        "type": "import",
+                        "name": alias.asname or alias.name,
+                    }
+                )
 
     return results
 
@@ -181,9 +191,12 @@ def main():
     parser.add_argument("--dir", default=os.getcwd(), help="Directory to scan (default: cwd)")
     parser.add_argument("--symbol", default=None, help="Find specific symbol by name (exact match)")
     parser.add_argument("--fuzzy", default=None, help="Fuzzy search for symbol by name (substring)")
-    parser.add_argument("--list", default=None,
-                        choices=["functions", "classes", "interfaces", "exports", "imports", "all"],
-                        help="List symbols of a specific type")
+    parser.add_argument(
+        "--list",
+        default=None,
+        choices=["functions", "classes", "interfaces", "exports", "imports", "all"],
+        help="List symbols of a specific type",
+    )
     parser.add_argument("--file", default=None, help="Scan a single file instead of directory")
     parser.add_argument("--dry-run", action="store_true", default=True, help="Preview mode (default)")
     parser.add_argument("--no-dry-run", action="store_false", dest="dry_run", help="Not used for code-navigator")

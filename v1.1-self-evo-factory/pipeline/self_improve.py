@@ -86,7 +86,7 @@ def run_self_coder(target: str) -> dict:
     """Run self_coder against a target file/dir, return parsed result.
     @repair will auto-fix JSON parse failures via LLM.
     """
-    rc, stdout, stderr = safe_run([sys.executable, str(SELF_CODER), '--rules', '--json', target])
+    rc, stdout, stderr = safe_run([sys.executable, str(SELF_CODER), '--rules', str(target), '--json'])
     try:
         data = json.loads(stdout) if rc in (0, 1) else None
     except json.JSONDecodeError:

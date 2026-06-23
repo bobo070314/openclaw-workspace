@@ -1,11 +1,15 @@
 #!/usr/bin/env python
-"""Message Bus — V4.5 Agent Nervous System.
+"""Message Bus — V5.0 Agent Nervous System.
 
 SecAgent / OpsAgent / AnalystAgent communicate via JSONL bus.
 Evolution Engine reads bus to coordinate multi-agent workflows.
+
+V5.0: Added cross-platform file locking (msvcrt on Windows, fcntl on Unix)
+to prevent concurrent-write corruption under multi-agent pressure.
 """
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,6 +18,22 @@ BUS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
 class MessageBus:
+    def _write_locked(self, filepath, message):
+        """Cross-platform locked write to prevent concurrent corruption."""
+        with open(filepath, "a", encoding="utf-8") as f:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1024)
+                f.write(message)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1024)
+            else:
+                import fcntl
+
+                fcntl.flock(f, fcntl.LOCK_EX)
+                f.write(message)
+                fcntl.flock(f, fcntl.LOCK_UN)
+
     def emit(self, sender, receiver, msg_type, payload):
         event = {
             "ts": datetime.now(timezone.utc).isoformat(),
@@ -22,8 +42,7 @@ class MessageBus:
             "type": msg_type,
             "payload": payload,
         }
-        with open(BUS_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        self._write_locked(BUS_FILE, json.dumps(event, ensure_ascii=False) + "\n")
         print(f"[BUS] {sender} -> {receiver}: {msg_type}")
 
     def listen(self, agent_name):

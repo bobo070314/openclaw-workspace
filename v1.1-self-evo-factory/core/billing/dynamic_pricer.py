@@ -1,5 +1,4 @@
-"""
-实时报价 + 动态变价 + 用途发毒誓
+"""实时报价 + 动态变价 + 用途发毒誓
 
 对标 Claude Code 的做法：
 1. 每次 API 调用之前先在本地算出 "这次要花多少钱"
@@ -7,11 +6,10 @@
 3. 用途审计 — 每条 API 调用都带 "这笔钱花来干什么"
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
-from datetime import datetime, timezone, timedelta
 from typing import Optional
-import json
 
 UTC = timezone.utc
 
@@ -152,6 +150,7 @@ class DynamicPricer:
 
         Returns:
             (需要降级?, 降级到哪个模型)
+
         """
         if self._forced_tier:
             return True, self._get_model_in_tier(self._forced_tier)

@@ -1,5 +1,4 @@
-"""
-进程复活看门狗 — 不是"状态检查"，是"原地复活"
+"""进程复活看门狗 — 不是"状态检查"，是"原地复活"
 
 对标 Claude Code 的做法：
 1. 主动心跳检测 — 不用被动等 cron 调度
@@ -11,10 +10,14 @@
 - 分级处理：WARNING(降级) → ERROR(重启) → FATAL(回滚)
 """
 
-from dataclasses import dataclass, field
-from enum import Enum
+import json
+import os
+import pathlib
+import threading
+import traceback
+from dataclasses import dataclass
 from datetime import datetime, timezone
-import json, os, pathlib, traceback, threading, time
+from enum import Enum
 
 UTC = timezone.utc
 
@@ -142,7 +145,7 @@ class ProcessWatchdog:
         if action:
             try:
                 action()
-            except Exception as e:
+            except Exception:
                 traceback.print_exc()
 
     def _save_coffin(self, component: str, comp: ComponentHealth):
@@ -196,4 +199,5 @@ class ProcessWatchdog:
 
 class SurvivalWatchdog(ProcessWatchdog):
     """别名兼容"""
+
     pass

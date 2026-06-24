@@ -1,5 +1,4 @@
-"""
-监控自愈 — 进程复活看门狗 + 分级自愈
+"""监控自愈 — 进程复活看门狗 + 分级自愈
 
 核心能力：
 1. ProcessWatchdog: 主动心跳检测 + 分级自愈（降级→重启→回滚）
@@ -7,6 +6,6 @@
 3. 零额外开销: 每次 API 调用之后顺手跑健康检查
 """
 
-from .watchdog import ProcessWatchdog, SurvivalWatchdog, ComponentHealth, HealthLevel
+from .watchdog import ComponentHealth, HealthLevel, ProcessWatchdog, SurvivalWatchdog
 
 __all__ = ["ProcessWatchdog", "SurvivalWatchdog", "ComponentHealth", "HealthLevel"]

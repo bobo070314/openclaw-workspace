@@ -1,5 +1,4 @@
-"""
-计费变价 — 实时报价 + 动态变价 + 用途发毒誓
+"""计费变价 — 实时报价 + 动态变价 + 用途发毒誓
 
 核心能力：
 1. 每次 API 调用前先估算成本（Quote）
@@ -7,6 +6,6 @@
 3. 每条调用声明用途（purpose）
 """
 
-from .dynamic_pricer import DynamicPricer, Quote, BillingStatement, Purpose, Tier, PRICING_TABLE, DOWNGRADE_CHAIN
+from .dynamic_pricer import DOWNGRADE_CHAIN, PRICING_TABLE, BillingStatement, DynamicPricer, Purpose, Quote, Tier
 
 __all__ = ["DynamicPricer", "Quote", "BillingStatement", "Purpose", "Tier", "PRICING_TABLE", "DOWNGRADE_CHAIN"]

@@ -1,6 +1,35 @@
 # MEMORY.md
 ## 2026-06-25 — 护城河补全 Day 1：记忆系统 3 文件落盘
 
+## 2026-06-25 (夜) — GitHub 补齐全扫描 + 全补
+
+### skills.entries 补齐
+- **下24个 extraDirs 技能全启用进 openclaw.json**: api-doc-generator, auto-valuation, auto_valuation, causal-reasoner, code-navigator, config-diff, docker-compose-gen, evaluator, infra-diagram-as-code, lobe-agent-testing, lobe-data-fetching, log-analyzer, mtunion-product-ai-guide, n8n-code-review, n8n-db-migrations, owl-vision, sandbox-executor, sandbox-test, security-audit, self-coder, site-doctor, sql-optimizer, subconscious-daemon, token-saver
+- **4个之前补过**: github-actions-generator, web-deploy-github, release-notes-generator, deployment-automation
+- 至此 v0.2.0 达标 extraDirs 技能全部 entries 启用
+- **7个 stub 未达标**（adversarial-guard, openclaw-skills, qclaw-shared, self-improvement-agent, summarize, system-governor, tavily-search）需后续修复
+
+### 脚本整理
+- `scripts/github/` 子目录：8 个 GitHub 脚本迁移完毕
+- .gitignore `github/` 排除放开 `!scripts/github/`
+- git.cmd 路径修正（git_safe_push.py→scripts/github/）
+- 新增 `scripts/scan_all_gaps.py` — 扫全部缺口的入口
+- 新增 `scripts/github/fix_baseline_remotes.py` — 修复 gh-enterprise-baseline 子仓库 remote
+
+### gh-enterprise-baseline 子仓库修复
+- 7/10 仓库已有 origin（cursor/dify/eve/lobe-chat/stripe/supabase/temporal/trpc）
+- n8n、prisma、stripe(stripe-node) origin 已修复
+
+### 根清理
+- 删除 workspace 根垃圾文件（clash exe移Temp, gbrain.html移Temp, 零碎文件删除）
+- openclaw-config 仓库 091ff99（24 skills）\+ workspace 6329628（cleanup + baseline fixes）已 SSH 推送
+
+### 仍缺口（需决策）
+1. `core/github_predator.py` — 有代码但未纳入 pipeline
+2. `core/` 14 个模块未引用（bm25/connectivity/offline_engine/openclaw_fallback 等老 infrastructure）
+3. OpenClaw 内置 57 个技能未条目化（正常，内置技能自动发现无需 entries）
+4. 网络：HTTPS 直连 github.com 被墙，必须走 SSH
+
 ### 记忆系统 (memory_types + extractor + retriever_agent)
 - **memory_types.py**：4类分类枚举（WHO_YOU_ARE/CORRECTIONS/PROJECT_STATE/RESOURCES），固定权重 corrections:1.0
 - **extractor.py**：后台 daemon 线程，每10秒扫 openclaw.log，19条正则触发词自动入库

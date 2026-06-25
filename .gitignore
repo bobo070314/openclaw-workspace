@@ -20,6 +20,7 @@ eslint/
 flutter/
 gitbook/
 github/
+!scripts/github/
 graphql-js/
 inkscape/
 jenkins/

@@ -1,0 +1,13 @@
+# scripts/github/ — GitHub 工具脚本合集
+# 从 scripts/ 迁移至此集中管理
+
+check_git_config.py
+check_subdir_git.py
+gh_monitor.py
+git_safe_push.py
+kairos_gh_check.py
+kairos_memory_maintenance.py
+setup_kairos_cron.py
+update-github-rank.py
+
+# 允许全部脚本 .gitkeep 管理子目录结构

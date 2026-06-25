@@ -1,4 +1,27 @@
 # MEMORY.md
+## 2026-06-25 — 护城河补全 Day 1：记忆系统 3 文件落盘
+
+### 记忆系统 (memory_types + extractor + retriever_agent)
+- **memory_types.py**：4类分类枚举（WHO_YOU_ARE/CORRECTIONS/PROJECT_STATE/RESOURCES），固定权重 corrections:1.0
+- **extractor.py**：后台 daemon 线程，每10秒扫 openclaw.log，19条正则触发词自动入库
+- **retriever_agent.py**：qwen3.5:2b 语义召回 → 权重 rerank（corrections 永远第一）→ Top5 投喂 DeepSeek
+- **验证**：3/3 文件 --health/--json 全部通过
+- **Commit**：0e5747b (push 成功)
+
+### 护城河补全 Day 1 完成：5大模块 10/10 全部落盘
+
+| 模块 | 文件 | 状态 |
+|------|------|------|
+| 记忆系统 | memory_types.py + extractor.py + retriever_agent.py | ✅ 3/3 |
+| 多Agent Coordinator | coordinator_rules.md(30规则) + coordinator_agent.py + acceptance.py | ✅ 3/3 |
+| YOLO安全 | yolo_classifier.py(23道检测) + global_compliance.py(23道reexport) | ✅ 2/2 |
+| 省钱模式 | cache_manager.py(14种失败类型 + DANGEROUS黑名单) | ✅ 1/1 |
+| 秘密武器 | kairos_scheduler.py(GitHub CVE监控) + anti_distillation.py(水印+金丝雀) | ✅ 2/2 |
+
+- **验收**：18/18 ALL PASS（test_final_closure.py）
+- **Commit**：5715914 (push 成功)
+- **代码增量**：~3,500行核心逻辑
+
 ## 2026-06-25 — Ollama 离线大脑点亮 🦞
 
 ### 成就：猫抓有了本地 LLM 引擎

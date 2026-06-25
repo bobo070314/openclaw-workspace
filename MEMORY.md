@@ -1,4 +1,26 @@
 # MEMORY.md
+## 2026-06-25 — Ollama 离线大脑点亮 🦞
+
+### 成就：猫抓有了本地 LLM 引擎
+- **Ollama 服务**：127.0.0.1:11634（绕过 WinNAT 11406-11505 保留段）
+- **模型**：qwen3.5:2b Q8_0（2.7GB，25/25 layers GPU）
+- **GPU**：NVIDIA GTX 1060 3GB CUDA 6.1
+- **推理速度**：30-90 秒（3GB 显存极限）
+- **三级回退**：local (Ollama) → cloud (DeepSeek) → offline (规则引擎)
+- **核心文件**：`D:\bobo\projects\v1.1-self-evo-factory\core\local_llm.py`
+- **启动脚本**：`scripts\start_ollama.ps1`（管理员 PowerShell）
+- **保活守护**：`scripts\ollama_keepalive.py`（每 4 分钟 ping 防 5min keep_alive 过期）
+
+### 踩坑纪录
+- `low_vram` 不是 Ollama v0.22 有效选项 → 删掉
+- requests 被系统代理污染 → `trust_env=False` + pop 所有 *_PROXY
+- urllib 裸 socket POST → chunked transfer encoding 解析失败 → 改用 requests
+- qwen3.5 response 字段为空 → thinking 字段提取最后一段
+- 模型 5 分钟 keep_alive 过期 → 跑 ollama_keepalive.py 保活
+- 管理员 PowerShell 需 `$env:OLLAMA_HOST` 语法，`set` 无效
+
+---
+
 ## 2026-06-23 终态 — V2.13 全量快照 (148/148 标准化)
 
 ### Git 仓库
@@ -95,6 +117,10 @@
 - **修复方案：scripts/git_safe_push.py**，判断 fatal/error/Permission denied 等真失败才 non-zero
 - **Gateway 里需用 `python scripts/git_safe_push.py` 替代 `git push` 避免持久报错**
 - **process tool session 被 kill 后查不到 log**，直接 `process list` 看状态即可，别反复 poll
+- **代理/VPN 出问题 → 先重启 GUI 客户端让它自己修复**，不要手动 kill 内核进程再手写配置文件
+- **Clash Premium 2023.08.17 不兼容魔戒.net的 Clash Meta 格式**：mihomo.config.yaml 里的 mixed-port/cipher=auto/嵌套proxy-group 在旧核上解析失败
+- **CFW 的 randomControllerPort 和 secret 每次启动重建**，别硬编码到脚本里
+- **kill 代理内核后手写 config.yaml 会导致 GeoIP 规则失效**，节点 SSL EOF，白做
 
 ## 偏好
 - 样式用 Tailwind，不用 CSS Module

@@ -18,9 +18,10 @@
 |------|------|
 | Git Commits | 78 次 |
 | Python 文件 | 64 个（core 业务） |
+| 总源文件 | 257 个 |
+| 核心代码行数 | 18,656 行（v1.1-self-evo-factory） |
+| Python 代码行数 | 14,143 行（占总量 75.8%） |
 | 技能数量 | 148 个（全部 v0.2.0 标准化） |
-| 核心代码行数 | ~18,656 行（仅 v1.1-self-evo-factory） |
-| 全项目代码量 | ~10 万行（含 skills + workspace） |
 | 验收通过率 | 21/21 (100%) |
 | 运行环境 | Windows 10 x64, Python 3.13, Node v24 |
 | 本地模型 | Ollama qwen3.5:2b Q8_0 (2.7GB, GTX 1060 3GB) |
@@ -28,7 +29,26 @@
 
 ---
 
-## 二、版本演进时间线
+## 二、代码体量统计
+
+| 目录 | 总行数 | Python 行数 | .py 文件数 |
+|------|--------|------------|-----------|
+| core/ | 7,144 | 6,994 | 14 |
+| skills/ | 7,279 | 5,014 | 29 |
+| scripts/ | 741 | 718 | 11 |
+| tests/ | 229 | 229 | 3 |
+| web/ | 591 | 143 | 1 |
+| cn_channels/ | 1,045 | 1,045 | 6 |
+| config/ + 根目录 | 1,627 | 0 | 0 |
+| **TOTAL** | **18,656** | **14,143** | **64** |
+
+按扩展名：.py 14,143行 | .md 2,240行 | .json 1,605行 | .html 572行 | .yaml 54行 | .ps1 23行 | .toml 12行 | .bat 7行
+
+core/ + skills/ 合计 14,423 行，占总量 77%。
+
+---
+
+## 三、版本演进时间线
 
 ### V1.0 — 萌芽期（约 2026-06-22 前）
 - 在 OpenClaw 国际版上搭建基础运行环境
@@ -67,7 +87,7 @@
 
 ---
 
-## 三、核心架构：五层工业级内核
+## 四、核心架构：五层工业级内核
 
 ```
 ┌─────────────────────────────────────────┐
@@ -88,101 +108,75 @@
 └─────────────────────────────────────────┘
 ```
 
-### 3.1 记忆系统（完成度 92%）
-
-| 文件 | 功能 | 行数 |
-|------|------|------|
-| `memory_types.py` | 4类分类：WHO_YOU_ARE/CORRECTIONS/PROJECT_STATE/RESOURCES | 权重配置 |
-| `retriever_agent.py` | 语义召回→rerank→Top5，加载 qwen3.5:2b | 小模型检索 |
-| `extractor.py` | 正则匹配"我喜欢/错了/重做"，监听 openclaw.log 自动入库 | 后台静默 |
-
-**设计亮点**：
-- 打回记录自动存入 corrections 分类，下次同类任务优先检索
-- 无用户感知的后台提取，不打断工作流
-
-**剩余工作**：全局自动触发检索钩子（2行代码）
-
-### 3.2 多 Agent Coordinator（完成度 88%）
+### 4.1 记忆系统（完成度 92%）
 
 | 文件 | 功能 |
 |------|------|
-| `coordinator_rules.md` | 12条自然语言规则（CSO需含用户画像、VIS需通过间距检测等） |
-| `coordinator_agent.py` | 多Agent调度器 |
-| `acceptance.py` | 拒绝橡皮图章——不符合规则直接返回 False + 记录纠正记忆 |
+| memory_types.py | 4类分类：WHO_YOU_ARE/CORRECTIONS/PROJECT_STATE/RESOURCES，权重配置 correction:1.0/who_you_are:0.9 |
+| retriever_agent.py | 语义召回→rerank→Top5，加载 qwen3.5:2b 小模型检索 |
+| extractor.py | 正则匹配"我喜欢/错了/重做"，监听 openclaw.log 自动入库，无用户感知 |
 
-**设计亮点**：
-- 规则可自然语言编写，不绑定代码
-- 验收失败自动触发修复-重试-再验收闭环
+**设计亮点**：打回记录自动存入 corrections 分类，下次同类任务优先检索。
 
-**剩余工作**：规则自动加载（10行）+ 同类任务自动关联纠正记忆（10行）
-
-### 3.3 YOLO 安全分类器（完成度 99%）
-
-| 文件 | 功能 | 行数 |
-|------|------|------|
-| `yolo_classifier.py` | 单一分类入口 `classify()` | 1,487 行 |
-| `global_compliance.py` | 23 个独立检测函数 | 310 行 |
-| 23道检测 | Unicode零宽字符 / Zsh注入 / 路径穿越 / SQL注入 / XSS / 硬编码密钥 / 命令注入 / 敏感信息泄露 / ... | 全覆盖 |
-
-**设计亮点**：
-- 每道检测独立函数，单一职责，易维护
-- 所有检测通过返回 True，任一失败返回 False——无多重决策
-- 对标准确对标 Claude Code 51万行的安全设计
-
-**剩余工作**：13 行注释（不影响功能）
-
-### 3.4 省钱模式（完成度 100%）
+### 4.2 多 Agent Coordinator（完成度 88%）
 
 | 文件 | 功能 |
 |------|------|
-| `cache_manager.py` | 14 个失败计数器（no_hash/expired/model_mismatch 等） |
-| 去重逻辑 | 同一 Prompt + 同一模型 + 10分钟内重复 → 直接返回缓存 |
+| coordinator_rules.md | 12条自然语言规则（CSO需含用户画像、VIS需通过间距检测等） |
+| coordinator_agent.py | 多Agent调度器 |
+| acceptance.py | 拒绝橡皮图章——不符合规则直接返回 False + 记录纠正记忆 |
 
-**成果**：经测算可减少 27% 无效 API 调用，月省 $X（取决于实际调用量）
+**设计亮点**：规则可自然语言编写，不绑定代码。验收失败自动触发修复-重试-再验收闭环。
 
-### 3.5 秘密武器（完成度 97%）
+### 4.3 YOLO 安全分类器（完成度 99%）
+
+| 文件 | 功能 | 行数 |
+|------|------|------|
+| yolo_classifier.py | 单一分类入口 classify() | 1,487 行 |
+| global_compliance.py | 23 个独立检测函数 | 310 行 |
+
+23道检测：Unicode零宽字符 / Zsh注入 / 路径穿越 / SQL注入 / XSS / 硬编码密钥 / 命令注入 / 敏感信息泄露等全覆盖。每道检测独立函数，单一职责。所有检测通过返回 True，任一失败返回 False，无多重决策。
+
+### 4.4 省钱模式（完成度 100%）
 
 | 文件 | 功能 |
 |------|------|
-| `kairos_scheduler.py` | 7x24 监听：GitHub（每5分钟）、资源告警（CPU/API余额） |
-| `anti_distillation.py` | 逻辑水印（0xDEADBEEF）、误导注释（"性能优化"实为低效逻辑） |
+| cache_manager.py | 14 个失败计数器（no_hash/expired/model_mismatch 等） |
 
-**剩余工作**：微信通知自动读取系统配置（5行代码）
+去重逻辑：同一 Prompt + 同一模型 + 10分钟内重复 → 直接返回缓存。经测算可减少 27% 无效 API 调用。
 
-### 3.6 进化引擎（自进化能力）
+### 4.5 秘密武器（完成度 97%）
 
-| 文件 | 功能 | 行数 |
-|------|------|------|
-| `evolution_engine.py` | V4.1-V5.0 核心：监控eval结果 → 自动调参 → 自PR → 多Agent编排 → 自愈 → 自动回滚 → 日志清理 | 876 行 |
-| `github_predator.py` | 自养引擎——自动吸收开源项目营养 | 428 行 |
+| 文件 | 功能 |
+|------|------|
+| kairos_scheduler.py | 7x24 监听：GitHub（每5分钟）、资源告警（CPU/API余额） |
+| anti_distillation.py | 逻辑水印（0xDEADBEEF）、误导注释（"性能优化"实为低效逻辑） |
 
-**6/23 关键事件**：进化引擎在无人干预下自动生成了 P0 三个模块：
-- 监控与自愈系统（evolution_engine.py 自升级）
-- 计费与成本归因（international_billing.py）
-- 法律合规防火墙（global_compliance.py）
-- 灾难恢复冷备（global_disaster_recovery.py）
-
-### 3.7 离线大脑（V5.0.1 新增）
+### 4.6 进化引擎（自进化能力）
 
 | 文件 | 功能 | 行数 |
 |------|------|------|
-| `local_llm.py` | 三级回退入口：local(Ollama)→cloud(DeepSeek)→offline | 290 行 |
-| `offline_engine.py` | 纯离线规则引擎，9条规则（问候/代码/天气/回退等） | 85 行 |
-| `bm25_fallback.py` | 纯 Python BM25 全文检索 | 140 行 |
-| `local_vector_store.py` | 纯 Python 向量存储，cosine 相似度（去 numpy 依赖） | 150 行 |
-| `connectivity.py` | 网络连通性自动探测（DNS/TCP/Proxy） | 100 行 |
-| `openclaw_fallback.py` | OpenClaw 集成适配器，health API + 断网检测 | 75 行 |
+| evolution_engine.py | V4.1-V5.0 核心：监控eval→自动调参→自PR→多Agent→自愈→自动回滚→日志清理 | 876 行 |
+| github_predator.py | 自养引擎——自动吸收开源项目营养 | 428 行 |
 
-**设计亮点**：
-- 完全离线可用——断网时规则引擎 + BM25 + 向量存储照常工作
-- Windows 环境适配：去 numpy、去 Linux 命令、GBK 编码兼容
-- 推理耗时 30-90 秒（GTX 1060 3GB 极限），云端 3-5 秒
+**6/23 关键事件**：进化引擎在无人干预下自动生成了 P0 三个模块：监控自愈、计费归因、法律合规、灾难恢复。
+
+### 4.7 离线大脑（V5.0.1 新增）
+
+| 文件 | 功能 | 行数 |
+|------|------|------|
+| local_llm.py | 三级回退入口：local(Ollama)→cloud(DeepSeek)→offline | 290 行 |
+| offline_engine.py | 纯离线规则引擎，9条规则 | 85 行 |
+| bm25_fallback.py | 纯 Python BM25 全文检索 | 140 行 |
+| local_vector_store.py | 纯 Python 向量存储，cosine 相似度（去 numpy） | 150 行 |
+| connectivity.py | 网络连通性自动探测（DNS/TCP/Proxy） | 100 行 |
+| openclaw_fallback.py | OpenClaw 集成适配器，health API + 断网检测 | 75 行 |
+
+**设计亮点**：完全离线可用——断网时规则引擎 + BM25 + 向量存储照常工作。Windows 环境适配：去 numpy、去 Linux 命令、GBK 编码兼容。
 
 ---
 
-## 四、技能生态（148 技能）
-
-### 技能分类
+## 五、技能生态（148 技能）
 
 | 类别 | 数量 | 代表技能 |
 |------|------|---------|
@@ -199,11 +193,11 @@
 | 生态集成 | 3 | wechat/feishu/douyin 发布 |
 | 进化引擎 | 5 | create-skill, create-pr, release-notes-generator, config-diff, sql-optimizer |
 
-**标准化程度**：148/148 (100%) 全部通过 --version/--json/--dry-run
+标准化程度：148/148 (100%) 全部通过 --version/--json/--dry-run。
 
 ---
 
-## 五、验收闭环（21/21）
+## 六、验收闭环（21/21）
 
 ```
 ============================================================
@@ -226,37 +220,37 @@
 
 ---
 
-## 六、技术亮点
+## 七、技术亮点
 
-### 6.1 Windows 环境适配
+### 7.1 Windows 环境适配
 - 规避 WinNAT 保留端口（11406-11505），Ollama 走 11634
-- PowerShell 下 `python -c` 吃引号 → 一律走 .py 文件
-- Windows GBK 终端兼容 `PYTHONIOENCODING=utf-8`
-- `subprocess.run(encoding="utf-8")` 全覆盖
-- `datetime.UTC` → `timezone.utc` 兼容 3.11-
+- PowerShell 下 python -c 吃引号 → 一律走 .py 文件
+- Windows GBK 终端兼容 PYTHONIOENCODING=utf-8
+- subprocess.run(encoding="utf-8") 全覆盖
+- datetime.UTC → timezone.utc 兼容 3.11-
 - 去 numpy 依赖，纯 Python 实现向量存储和 BM25
 
-### 6.2 踩坑知识库
+### 7.2 踩坑知识库
 - requests 代理污染 → trust_env=False + pop 所有 *_PROXY
 - qwen3.5 thinking 模式 → response 字段为空，需从 thinking 提取
 - Ollama keep_alive 5分钟 → 保活守护每 240 秒 ping
 - Ollama v0.22 不认 low_vram 选项
 - Git PowerShell stderr 误判 → git_safe_push.py 过滤
 
-### 6.3 自进化能力
+### 7.3 自进化能力
 - 进化引擎可在无人干预下自动生成 P0 级别核心模块
 - 6/23 实战：一口气生成监控/计费/合规/灾备 4 个模块
 - GitHub Predator 自动吸收开源项目营养
 - Kairos 7x24 监听 + 危机预测
 
-### 6.4 离线生存
+### 7.4 离线生存
 - 完全断网仍可工作（离线规则 + BM25 + 向量检索）
 - 三级回退自动切换，用户无感知
 - 连通性检测 60 秒缓存，不浪费 API 调用
 
 ---
 
-## 七、剩余工作（总计约 40 行代码）
+## 八、剩余工作（总计约 40 行代码）
 
 | 模块 | 当前完成度 | 剩余 | 工作量 |
 |------|-----------|------|--------|
@@ -268,29 +262,14 @@
 
 ---
 
-## 八、Git 仓库状态
+## 九、Git 仓库状态
 
-| 仓库 | 远程地址 | 分支 | 最新 Commit | 状态 |
-|------|---------|------|------------|------|
-| v1.1-self-evo-factory | git@github.com:bobo070314/v1.1-self-evo-factory.git | master | d2979df | clean ✅ |
-| openclaw-foreign-workspace | git@github.com:bobo070314/openclaw-foreign-workspace.git | master | 15ee08c | clean ✅ |
+| 仓库 | 远程地址 | 最新 Commit | 状态 |
+|------|---------|------------|------|
+| v1.1-self-evo-factory | git@github.com:bobo070314/v1.1-self-evo-factory.git | d2979df | clean ✅ |
+| openclaw-foreign-workspace | git@github.com:bobo070314/openclaw-foreign-workspace.git | 7a98072 | clean ✅ |
 
 **Tag**：`v5.0.1-IRON-LOBSTER`（已推送）
-
----
-
-## 九、数据纵览
-
-| 指标 | 数值 |
-|------|------|
-| 总 Commits | 78 |
-| 核心 Python 文件 | 64 个 |
-| 技能数量 | 148（全 v0.2.0） |
-| 进化引擎自动生成模块 | 4 个（P0 级） |
-| 离线推理速度 | 30-90 秒/请求 |
-| 云端推理速度 | 3-5 秒/请求 |
-| 21 项验收通过率 | 100% |
-| 项目完成度 | 95%（仅差 40 行代码） |
 
 ---
 

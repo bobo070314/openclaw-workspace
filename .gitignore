@@ -162,6 +162,60 @@ releases/
 *.jsonl
 .pm2/
 
+# Deploy state (auto-generated)
+.deploy/backups/
+.deploy/screenshots/
+.deploy/playwright_test.png
+.project_registry.json
+.survival_hashes.json
+
+# Audit scrap
+_audit_report.json
+_caipiao_stats.json
+audit_final_report.json
+audit_q1_v3.py
+audit_q4.py
+security_scan_20260625.json
+skills_audit.py
+skills_audit_report.json
+skill_audit/
+
+# Clash/VPN debug scripts
+scripts/askpass.py
+scripts/check_*.py
+scripts/deep_diag.py
+scripts/direct_launch.py
+scripts/find_*.py
+scripts/fix_*.py
+scripts/force_proxy.py
+scripts/inspect_config.py
+scripts/launch_clash_core.py
+scripts/restart_cfw.py
+scripts/test_proxy_server.py
+scripts/test_proxy.py
+scripts/test_proxy2.py
+scripts/test_proxy3.py
+scripts/verify_*
+scripts/check_*
+scripts/fix_*
+scripts/find_*
+test_proxy.py
+test_proxy2.py
+test_proxy3.py
+verify_audit.py
+verify_net.py
+win_check.py
+fix_clash.py
+check_nonskeleton.py
+Clash.Verge*.exe
+
+# Reports/states
+reports/
+states/
+
+# Wiki (duplicated)
+wiki/
+
 # Runtime (keep eval-suite test files tracked)
 v1.1-self-evo-factory/states/
 v1.1-self-evo-factory/logs/

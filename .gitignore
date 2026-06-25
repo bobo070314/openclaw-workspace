@@ -216,6 +216,20 @@ states/
 # Wiki (duplicated)
 wiki/
 
+# Core garbage
+core/fix_*.py
+core/refactor_duplicates.py
+core/run_all_fixes.py
+
+# Project registry (auto-generated)
+projects/
+
+# Scripts garbage
+scripts/kairos_memory_maintenance.py
+
+# Iron lobster page (already committed)
+web/iron-lobster-car.html
+
 # Runtime (keep eval-suite test files tracked)
 v1.1-self-evo-factory/states/
 v1.1-self-evo-factory/logs/
